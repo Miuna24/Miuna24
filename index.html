@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>How do you feel today? — Feeling Room</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #242a35;
+      background: #fff;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      --ink: #242a35;
+      --muted: #737987;
+      --accent: #5746d8;
+      --line: #e8e5de;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background: #fff;
+    }
+
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .page-shell {
+      display: grid;
+      width: 100%;
+      min-height: 100vh;
+      min-height: 100dvh;
+      place-items: center;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    main { width: 100%; }
+
+    .card {
+      width: min(100%, 650px);
+      margin: 0 auto;
+      padding: clamp(18px, 5vw, 38px);
+    }
+
+    .question {
+      margin: 0 0 25px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 500;
+      letter-spacing: -.045em;
+      text-align: center;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .feeling-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .feeling-option {
+      min-height: 90px;
+      padding: 12px 8px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      color: var(--ink);
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease;
+    }
+
+    .feeling-option:hover { transform: translateY(-2px); border-color: #bdb5f4; }
+    .feeling-option[aria-pressed="true"] {
+      border-color: var(--feeling-color);
+      background: color-mix(in srgb, var(--feeling-color) 13%, white);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--feeling-color) 28%, transparent);
+    }
+
+    .feeling-emoji { display: block; margin-bottom: 7px; font-size: 1.4rem; }
+    .feeling-name { font-size: .8rem; font-weight: 650; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 25px;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 47px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 19px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--ink);
+      color: white;
+      font-size: .88rem;
+      font-weight: 680;
+      transition: transform .16s ease, background .16s ease, opacity .16s ease;
+    }
+
+    .button:hover:not(:disabled) { transform: translateY(-1px); background: #3a4150; }
+    .button:disabled { cursor: not-allowed; opacity: .42; }
+
+    .reason-input {
+      display: block;
+      width: 100%;
+      min-height: 155px;
+      resize: vertical;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      background: #fff;
+      color: var(--ink);
+      font-size: 1rem;
+      line-height: 1.6;
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+
+    .reason-input::placeholder { color: #a4a7ae; }
+    .reason-input:focus { border-color: #9c91ed; box-shadow: 0 0 0 3px rgba(87, 70, 216, .1); }
+
+    .message {
+      min-height: 20px;
+      margin: 10px 0 0;
+      color: #b34444;
+      font-size: .82rem;
+    }
+
+    #cloud-page {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+    }
+
+    .cloud-card,
+    .cloud-zone,
+    .word-cloud {
+      width: 100%;
+      height: 100%;
+    }
+
+    .cloud-zone {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: linear-gradient(125deg, #eeeafc, #eaf5f3);
+      transition: background 500ms ease;
+    }
+
+    .word-cloud {
+      position: relative;
+      overflow: hidden;
+      background: transparent;
+      text-align: center;
+    }
+
+    #word-cloud-chart,
+    .word-cloud-fallback {
+      width: 100%;
+      height: 100%;
+    }
+
+    .word-cloud-fallback {
+      display: flex;
+      align-content: center;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 4px 13px;
+      padding: 18px;
+    }
+
+    .cloud-word {
+      display: inline-block;
+      padding: 1px 3px;
+      font-weight: 740;
+      letter-spacing: -.045em;
+      line-height: 1.25;
+      animation: appear .35s ease both;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .empty-cloud {
+      max-width: 310px;
+      color: #666b78;
+      font-size: .95rem;
+      line-height: 1.6;
+    }
+
+    [hidden] { display: none !important; }
+
+    @media (max-width: 560px) {
+      .page-shell { padding: 18px; }
+      .feeling-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .feeling-option { min-height: 73px; display: flex; align-items: center; gap: 10px; padding: 10px 13px; text-align: left; }
+      .feeling-emoji { margin: 0; }
+      .actions { margin-top: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <main>
+      <section id="feeling-page">
+        <div class="card">
+          <h2 class="question">How do you feel today?</h2>
+          <div class="feeling-grid" id="feeling-options" role="group" aria-label="Choose a feeling"></div>
+          <div class="actions">
+            <span aria-hidden="true"></span>
+            <button class="button" id="continue-button" type="button" disabled>Continue <span aria-hidden="true">→</span></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="reason-page" hidden>
+        <form class="card" id="reason-form">
+          <h2 class="question">What made you feel this feeling?</h2>
+          <label class="sr-only" for="reason-input">What made you feel this feeling?</label>
+          <textarea class="reason-input" id="reason-input" maxlength="240" placeholder="Maybe it was a small moment, a person, or something on your mind…" required></textarea>
+          <p class="message" id="form-message" role="alert"></p>
+          <div class="actions">
+            <span aria-hidden="true"></span>
+            <button class="button" id="share-button" type="submit">Continue <span aria-hidden="true">→</span></button>
+          </div>
+        </form>
+      </section>
+
+      <section id="cloud-page" hidden>
+        <div class="cloud-card">
+          <div class="cloud-zone" id="cloud-zone">
+            <div class="word-cloud" id="word-cloud" role="img" aria-label="A live word cloud of participant responses">
+              <div id="word-cloud-chart" aria-hidden="true" hidden></div>
+              <div class="word-cloud-fallback" id="word-cloud-fallback">
+                <p class="empty-cloud">Your words will appear here, alongside everyone else’s, as people share.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.amcharts.com/lib/5/index.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/wc.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/themes/Animated.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/themes/Responsive.js"></script>
+  <script src="https://cdn.amcharts.com/lib/5/themes/Adaptive.js"></script>
+  <script>
+    const feelings = [
+      { id: "happy", label: "Happy", emoji: "⸜(｡˃ ᵕ ˂ )⸝♡", color: "#ffd166", text: "#765313" },
+      { id: "calm", label: "Calm", emoji: "(˶ᵔ ᵕ ᵔ˶)", color: "#7bdff2", text: "#176072" },
+      { id: "anger", label: "Anger", emoji: "( •̀ ᴖ •́ )", color: "#ff9f1c", text: "#81440a" },
+      { id: "stressed", label: "Stressed", emoji: "(꩜ ᯅ ꩜;)⁭", color: "#ff6b6b", text: "#873534" },
+      { id: "sad", label: "Sad", emoji: "(╥﹏╥)", color: "#8e9aaf", text: "#404d65" },
+      { id: "great", label: "Great!", emoji: "(ദ്ദി ˙ᗜ˙ )", color: "#cdb4db", text: "#644978" },
+      { id: "frustrated", label: "Frustrated", emoji: "( ᗒᗣᗕ )", color: "#ff6b6b", text: "#873534" },
+      { id: "tired", label: "Tired", emoji: "(ᴗ˳ᴗ)ᶻ𝗓𐰁", color: "#b8c0cc", text: "#4b5360" }
+    ];
+    const stopWords = new Set([
+      "about", "after", "again", "also", "and", "are", "because", "been", "before", "being",
+      "but", "can", "could", "did", "does", "doing", "for", "from", "had", "has", "have",
+      "her", "here", "him", "his", "how", "into", "its", "just", "made", "make", "maybe",
+      "more", "much", "my", "not", "our", "out", "over", "really", "she", "some", "something",
+      "that", "the", "their", "them", "then", "there", "these", "they", "this", "those",
+      "through", "today", "was", "were", "what", "when", "where", "which", "who", "with",
+      "would", "you", "your"
+    ]);
+
+    const feelingPage = document.getElementById("feeling-page");
+    const reasonPage = document.getElementById("reason-page");
+    const cloudPage = document.getElementById("cloud-page");
+    const continueButton = document.getElementById("continue-button");
+    const reasonInput = document.getElementById("reason-input");
+    const formMessage = document.getElementById("form-message");
+    let selectedFeeling = null;
+    let submissions = [];
+    let socket;
+    let cloudRoot = null;
+    let cloudSeries = null;
+
+    function showPage(page) {
+      feelingPage.hidden = page !== "feeling";
+      reasonPage.hidden = page !== "reason";
+      cloudPage.hidden = page !== "cloud";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (page === "cloud") {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            initializeWordCloud();
+            if (cloudRoot) cloudRoot.resize();
+            renderCloud();
+          });
+        });
+      }
+    }
+
+    function initializeWordCloud() {
+      if (cloudRoot || !window.am5 || !window.am5wc) return;
+
+      cloudRoot = am5.Root.new("word-cloud-chart");
+      cloudRoot.setThemes([
+        am5themes_Animated.new(cloudRoot),
+        am5themes_Adaptive.new(cloudRoot, {
+          baseColor: 0x4150a0,
+          baseColor2: 0xf0825a,
+          count: 10,
+          mapShade: true,
+          keepContrast: true
+        }),
+        am5themes_Responsive.new(cloudRoot)
+      ]);
+
+      const chart = cloudRoot.container.children.push(am5.SerialChartContainer.new(cloudRoot, {
+        width: am5.p100,
+        height: am5.p100
+      }));
+      chart.zoomableContainer.setAll({ wheelable: true, pinchZoom: true });
+      chart.set("zoomTools", am5.ZoomTools.new(cloudRoot, {}));
+
+      cloudSeries = chart.series.push(am5wc.WordCloud.new(cloudRoot, {
+        categoryField: "category",
+        valueField: "value",
+        rotationThreshold: 0,
+        maxCount: 70,
+        minValue: 1,
+        minWordLength: 2,
+        maxFontSize: am5.percent(35)
+      }));
+      cloudSeries.labels.template.setAll({
+        paddingTop: 5,
+        paddingBottom: 5,
+        paddingLeft: 5,
+        paddingRight: 5,
+        fontFamily: "Courier New",
+        templateField: "labelSettings"
+      });
+    }
+
+    function connect() {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      socket = new WebSocket(`${protocol}//${window.location.host}`);
+
+      socket.addEventListener("message", (event) => {
+        let message;
+        try {
+          message = JSON.parse(event.data);
+        } catch {
+          formMessage.textContent = "The live update could not be read. Please refresh the page.";
+          return;
+        }
+
+        if (message.type === "snapshot" && Array.isArray(message.submissions)) {
+          submissions = message.submissions;
+          renderCloud();
+        } else if (message.type === "error") {
+          formMessage.textContent = message.message || "Your response could not be shared. Please try again.";
+        }
+      });
+
+      socket.addEventListener("close", () => {
+        window.setTimeout(connect, 1500);
+      });
+
+      socket.addEventListener("error", () => socket.close());
+    }
+
+    function renderFeelingOptions() {
+      const options = document.getElementById("feeling-options");
+      for (const feeling of feelings) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "feeling-option";
+        button.style.setProperty("--feeling-color", feeling.color);
+        button.setAttribute("aria-pressed", "false");
+        button.innerHTML = `<span class="feeling-emoji" aria-hidden="true">${feeling.emoji}</span><span class="feeling-name">${feeling.label}</span>`;
+        button.addEventListener("click", () => {
+          selectedFeeling = feeling.id;
+          options.querySelectorAll(".feeling-option").forEach((option) => option.setAttribute("aria-pressed", "false"));
+          button.setAttribute("aria-pressed", "true");
+          continueButton.disabled = false;
+        });
+        options.append(button);
+      }
+    }
+
+    function renderCloud() {
+      const wordCloud = document.getElementById("word-cloud");
+      const chartElement = document.getElementById("word-cloud-chart");
+      const fallbackElement = document.getElementById("word-cloud-fallback");
+      const cloudZone = document.getElementById("cloud-zone");
+      const wordCounts = new Map();
+      const feelingCounts = new Map();
+
+      for (const submission of submissions) {
+        const feeling = feelings.find((item) => item.id === submission.feeling);
+        if (!feeling || typeof submission.reason !== "string") continue;
+        feelingCounts.set(feeling.id, (feelingCounts.get(feeling.id) || 0) + 1);
+        const words = submission.reason.toLocaleLowerCase().match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || [];
+        for (const word of words) {
+          const cleaned = word.replace(/^['’-]+|['’-]+$/g, "");
+          if (cleaned.length < 2 || stopWords.has(cleaned)) continue;
+          const entry = wordCounts.get(cleaned) || { count: 0, feelings: new Map() };
+          entry.count += 1;
+          entry.feelings.set(feeling.id, (entry.feelings.get(feeling.id) || 0) + 1);
+          wordCounts.set(cleaned, entry);
+        }
+      }
+
+      const dominantFeelings = [...feelingCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([id]) => feelings.find((item) => item.id === id));
+      if (dominantFeelings.length) {
+        const stops = dominantFeelings.map((item, index) => {
+          const percentage = dominantFeelings.length === 1 ? 0 : (index / (dominantFeelings.length - 1)) * 100;
+          return `${item.color} ${percentage}%`;
+        });
+        cloudZone.style.background = `linear-gradient(125deg, ${stops.join(", ")})`;
+      } else {
+        cloudZone.style.background = "linear-gradient(125deg, #eeeafc, #eaf5f3)";
+      }
+
+      const words = [...wordCounts.entries()].sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0])).slice(0, 70);
+      if (words.length === 0) {
+        chartElement.hidden = true;
+        fallbackElement.hidden = false;
+        fallbackElement.replaceChildren();
+        const empty = document.createElement("p");
+        empty.className = "empty-cloud";
+        empty.textContent = "Your words will appear here, alongside everyone else’s, as people share.";
+        fallbackElement.append(empty);
+        return;
+      }
+
+      const maxCount = words[0][1].count;
+      if (cloudSeries) {
+        fallbackElement.hidden = true;
+        chartElement.hidden = false;
+        cloudSeries.data.setAll(words.map(([word, entry]) => {
+          const dominantId = [...entry.feelings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+          const feeling = feelings.find((item) => item.id === dominantId);
+          return {
+            category: word,
+            value: entry.count,
+            labelSettings: { fill: am5.color(parseInt(feeling.color.slice(1), 16)) }
+          };
+        }));
+        return;
+      }
+
+      chartElement.hidden = true;
+      fallbackElement.hidden = false;
+      fallbackElement.replaceChildren();
+      for (const [word, entry] of words) {
+        const dominantId = [...entry.feelings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+        const feeling = feelings.find((item) => item.id === dominantId);
+        const label = document.createElement("span");
+        label.className = "cloud-word";
+        label.textContent = word;
+        label.title = `${word}: ${entry.count} ${entry.count === 1 ? "mention" : "mentions"} · ${feeling.label}`;
+        label.style.color = feeling.text;
+        label.style.fontSize = `${14 + Math.sqrt(entry.count / maxCount) * 34}px`;
+        fallbackElement.append(label);
+      }
+    }
+
+    document.getElementById("continue-button").addEventListener("click", () => {
+      showPage("reason");
+      reasonInput.focus();
+    });
+
+    reasonInput.addEventListener("input", () => {
+      formMessage.textContent = "";
+    });
+
+    document.getElementById("reason-form").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const reason = reasonInput.value.trim();
+      if (!reason) {
+        formMessage.textContent = "Add a few words before you continue.";
+        reasonInput.focus();
+        return;
+      }
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        formMessage.textContent = "The live connection is unavailable. Please wait a moment and try again.";
+        return;
+      }
+
+      socket.send(JSON.stringify({ type: "submit", feeling: selectedFeeling, reason }));
+      formMessage.textContent = "";
+      reasonInput.value = "";
+      showPage("cloud");
+    });
+
+    renderFeelingOptions();
+    connect();
+  </script>
+</body>
+</html>

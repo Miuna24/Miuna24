@@ -1,0 +1,12 @@
+{
+  "name": "feeling-word-cloud",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A live, WebSocket-powered feeling check-in and word cloud.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}
