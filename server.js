@@ -34,6 +34,13 @@ const websocketServer = new WebSocketServer({ noServer: true, maxPayload: 512 })
 const clients = new Map();
 const validGestures = new Set(["tap", "swipe", "drift", "motion", "shake"]);
 const validSynths = new Set(["soft", "warm", "pluck", "glass", "reed", "piano"]);
+const roleNotes = {
+  bass: [36, 40, 43, 45, 48],
+  rhythm: [48, 50, 52, 55, 57],
+  melody: [60, 62, 64, 67, 69],
+  atmosphere: [72, 74, 76, 79, 81]
+};
+const roles = Object.keys(roleNotes);
 
 function broadcast(payload) {
   const message = JSON.stringify(payload);
@@ -44,6 +51,16 @@ function broadcast(payload) {
 
 function broadcastCount() {
   broadcast({ type: "state", count: websocketServer.clients.size });
+}
+
+function assignRole() {
+  const counts = new Map(roles.map((role) => [role, 0]));
+  for (const client of clients.values()) {
+    counts.set(client.role, counts.get(client.role) + 1);
+  }
+  return roles.reduce((leastUsed, role) =>
+    counts.get(role) < counts.get(leastUsed) ? role : leastUsed
+  );
 }
 
 server.on("upgrade", (request, socket, head) => {
@@ -60,8 +77,9 @@ server.on("upgrade", (request, socket, head) => {
 
 websocketServer.on("connection", (websocket) => {
   const clientId = crypto.randomUUID();
-  clients.set(websocket, { clientId, windowStartedAt: Date.now(), messagesInWindow: 0 });
-  websocket.send(JSON.stringify({ type: "welcome", clientId }));
+  const role = assignRole();
+  clients.set(websocket, { clientId, role, pulseCount: 0, windowStartedAt: Date.now(), messagesInWindow: 0 });
+  websocket.send(JSON.stringify({ type: "welcome", clientId, role }));
   broadcastCount();
 
   websocket.on("message", (rawMessage) => {
@@ -93,6 +111,11 @@ websocketServer.on("connection", (websocket) => {
       (data.synth !== undefined && !validSynths.has(data.synth))
     ) return;
 
+    const scale = roleNotes[client.role];
+    const gestureOffset = data.gesture === "swipe" ? 2 : data.gesture === "drift" ? 4 : 0;
+    const midiNote = scale[(client.pulseCount * 2 + gestureOffset) % scale.length];
+    client.pulseCount++;
+
     broadcast({
       type: "pulse",
       clientId: client.clientId,
@@ -101,7 +124,9 @@ websocketServer.on("connection", (websocket) => {
       strength: Math.max(0.18, Math.min(1, data.strength)),
       hue: ((data.hue % 360) + 360) % 360,
       gesture: data.gesture,
-      synth: validSynths.has(data.synth) ? data.synth : "soft"
+      synth: validSynths.has(data.synth) ? data.synth : "soft",
+      role: client.role,
+      midiNote
     });
   });
 

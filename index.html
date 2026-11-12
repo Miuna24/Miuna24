@@ -94,6 +94,29 @@
       box-shadow: 0 0 14px #ff8e9b;
     }
 
+    .identity {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .role-label {
+      color: rgba(245, 242, 255, .46);
+      font-size: 9px;
+      letter-spacing: .13em;
+      text-align: right;
+      text-transform: uppercase;
+    }
+
+    .role-label strong {
+      display: block;
+      margin-top: 5px;
+      color: #d3c8ff;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: .11em;
+    }
+
     main {
       position: fixed;
       inset: 0;
@@ -311,6 +334,9 @@
 
     @media (max-width: 600px) {
       header { padding: 23px 22px; }
+      .identity { gap: 12px; }
+      .role-label { font-size: 8px; }
+      .role-label strong { font-size: 9px; }
       footer { padding: 20px 22px 24px; }
       .hint { bottom: 79px; }
       .invitation { max-width: 84vw; }
@@ -332,7 +358,10 @@
   <div class="grain" aria-hidden="true"></div>
   <header>
     <div class="brand">An experiment in togetherness<strong>COMMON GROUND</strong></div>
-    <div class="live" id="connection"><span class="live-dot"></span><span id="connection-label">connecting</span></div>
+    <div class="identity">
+      <div class="role-label">Your part<strong id="role-name">Joining...</strong></div>
+      <div class="live" id="connection"><span class="live-dot"></span><span id="connection-label">connecting</span></div>
+    </div>
   </header>
   <main>
     <section class="invitation" id="invitation">
@@ -407,6 +436,12 @@
       const notes = [0, 2, 4, 7, 9];
       const deviceNotes = Array.from({ length: 5 }, () => notes[Math.floor(Math.random() * notes.length)]);
       const deviceRoot = 45 + Math.floor(Math.random() * 20);
+      const roleNames = {
+        bass: "Bass",
+        rhythm: "Rhythm",
+        melody: "Melody",
+        atmosphere: "Atmosphere"
+      };
       const synths = {
         soft: { waveform: "sine", partials: [1, 0.12], attack: 0.025, release: 0.58 },
         warm: { waveform: "triangle", partials: [1, 0.2, 0.06], attack: 0.04, release: 0.9 },
@@ -425,6 +460,7 @@
       const gravityLimit = 1.2;
       const shakeLimit = 5.5;
       let socket;
+      let deviceRole = "";
       let audioContext;
       let masterGain;
       let toneFilter;
@@ -475,15 +511,17 @@
             return;
           }
           if (data.type === "welcome") {
-            setClientId(data.clientId);
+            setClientId(data.clientId, data.role);
           } else if (data.type === "state") {
             peopleCount.textContent = String(data.count);
           } else if (data.type === "pulse") {
-            const x = data.x * width;
-            const y = data.y * height;
-            pulses.push({ x, y, hue: data.hue, strength: data.strength, age: 0, remote: true });
-            trails.push({ x, y, hue: data.hue, age: 0 });
-            if (data.clientId !== clientId) playNote(data.gesture, data.strength, data.hue, data.synth);
+            if (data.clientId !== clientId) {
+              const x = data.x * width;
+              const y = data.y * height;
+              pulses.push({ x, y, hue: data.hue, strength: data.strength, age: 0, remote: true });
+              trails.push({ x, y, hue: data.hue, age: 0 });
+            }
+            playNote(data.gesture, data.strength, data.hue, data.synth, data.midiNote, data.role);
           }
         });
         socket.addEventListener("close", () => {
@@ -498,14 +536,16 @@
       }
 
       let clientId = "";
-      function setClientId(id) {
+      function setClientId(id, role) {
         clientId = id;
+        deviceRole = roleNames[role] ? role : "";
+        document.getElementById("role-name").textContent = roleNames[deviceRole] || "Unassigned";
       }
 
       function sendPulse(point, gesture, strength) {
-        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        if (!socket || socket.readyState !== WebSocket.OPEN) return false;
         const now = performance.now();
-        if (now - lastSentAt < 46) return;
+        if (now - lastSentAt < 46) return false;
         lastSentAt = now;
         socket.send(JSON.stringify({
           type: "pulse",
@@ -516,14 +556,14 @@
           hue: localHue,
           synth: synthSelect.value
         }));
+        return true;
       }
 
       function addLocalPulse(point, gesture, strength) {
         localHue = (localHue + 23 + Math.random() * 12) % 360;
         pulses.push({ x: point.x, y: point.y, hue: localHue, strength, age: 0, remote: false });
         trails.push({ x: point.x, y: point.y, hue: localHue, age: 0 });
-        playNote(gesture, strength, localHue);
-        sendPulse(point, gesture, strength);
+        if (!sendPulse(point, gesture, strength)) playNote(gesture, strength, localHue);
         invitation.style.opacity = "0";
         invitation.style.transform = "translateY(-9px)";
       }
@@ -652,7 +692,7 @@
         }
       }
 
-      function playNote(gesture, strength, hue, synthName = synthSelect.value) {
+      function playNote(gesture, strength, hue, synthName = synthSelect.value, midiNote, role = deviceRole) {
         if (!soundEnabled || !audioContext) return;
         if (audioContext.state === "suspended") {
           audioContext.resume().catch((error) => console.error("Audio could not be resumed.", error));
@@ -663,7 +703,8 @@
           : gesture === "motion" ? 4
           : 0;
         const semitone = deviceNotes[(gestureIndex + Math.floor(hue / 60)) % deviceNotes.length];
-        const frequency = 440 * Math.pow(2, (deviceRoot + semitone - 69) / 12);
+        const note = Number.isInteger(midiNote) ? midiNote : deviceRoot + semitone;
+        const frequency = 440 * Math.pow(2, (note - 69) / 12);
         const shiftedFrequency = frequency * Math.pow(2, Number(pitchControl.value) / 12);
         const now = audioContext.currentTime;
         const synth = synths[synthName] || synths.soft;
@@ -683,9 +724,14 @@
           oscillator.start(now);
           return oscillator;
         });
-        const release = gesture === "drift" ? Math.max(synth.release, 0.8) : synth.release;
+        const release = role === "rhythm" ? Math.min(synth.release, 0.16)
+          : role === "bass" ? Math.max(synth.release, 0.75)
+          : role === "atmosphere" ? Math.max(synth.release, 1.2)
+          : gesture === "drift" ? Math.max(synth.release, 0.8)
+          : synth.release;
+        const attack = role === "rhythm" ? 0.003 : synth.attack;
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.09 * strength, now + synth.attack);
+        gain.gain.exponentialRampToValueAtTime(0.09 * strength, now + attack);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + release);
         gain.connect(toneFilter);
         for (const oscillator of oscillators) oscillator.stop(now + release + 0.05);
