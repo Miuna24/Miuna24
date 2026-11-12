@@ -457,8 +457,8 @@
           release: 0.95
         }
       };
-      const gravityLimit = 1.2;
-      const shakeLimit = 5.5;
+      const gravityLimit = 0.55;
+      const shakeLimit = 3;
       let socket;
       let deviceRole = "";
       let audioContext;
@@ -472,7 +472,7 @@
       let lastSentAt = 0;
       let lastMoveAt = 0;
       let lastMotionPulseAt = 0;
-      let lastMotion = null;
+      let lastGravityMotion = null;
       let lastPoint = null;
       let localHue = colors[Math.floor(Math.random() * colors.length)];
       let activePointers = 0;
@@ -604,25 +604,34 @@
       }
 
       function onDeviceMotion(event) {
-        const acceleration = event.acceleration;
-        const measured = acceleration && (acceleration.x !== null || acceleration.y !== null || acceleration.z !== null)
-          ? acceleration
-          : event.accelerationIncludingGravity;
-        if (!measured) return;
+        const linear = event.acceleration;
+        const gravity = event.accelerationIncludingGravity;
+        const hasLinearAcceleration = Boolean(linear &&
+          [linear.x, linear.y, linear.z].some(Number.isFinite));
+        const hasGravity = Boolean(gravity &&
+          [gravity.x, gravity.y, gravity.z].some(Number.isFinite));
+        const x = hasLinearAcceleration ? Number(linear.x) || 0 : hasGravity ? Number(gravity.x) || 0 : 0;
+        const y = hasLinearAcceleration ? Number(linear.y) || 0 : hasGravity ? Number(gravity.y) || 0 : 0;
 
-        const x = Number(measured.x) || 0;
-        const y = Number(measured.y) || 0;
-        const z = Number(measured.z) || 0;
-        const magnitude = Math.hypot(x, y, z);
-        const difference = lastMotion
-          ? Math.hypot(x - lastMotion.x, y - lastMotion.y, z - lastMotion.z)
+        let movement = hasLinearAcceleration
+          ? Math.hypot(Number(linear.x) || 0, Number(linear.y) || 0, Number(linear.z) || 0)
           : 0;
-        lastMotion = { x, y, z };
-
-        const hasLinearAcceleration = measured === acceleration;
-        const movement = hasLinearAcceleration ? magnitude : difference;
-        const threshold = hasLinearAcceleration ? gravityLimit : gravityLimit * 0.8;
-        if (movement < threshold) return;
+        if (hasGravity) {
+          const currentGravity = {
+            x: Number(gravity.x) || 0,
+            y: Number(gravity.y) || 0,
+            z: Number(gravity.z) || 0
+          };
+          if (lastGravityMotion) {
+            movement = Math.max(movement, Math.hypot(
+              currentGravity.x - lastGravityMotion.x,
+              currentGravity.y - lastGravityMotion.y,
+              currentGravity.z - lastGravityMotion.z
+            ));
+          }
+          lastGravityMotion = currentGravity;
+        }
+        if ((!hasLinearAcceleration && !hasGravity) || movement < gravityLimit) return;
 
         const now = performance.now();
         if (now - lastMotionPulseAt < 180) return;
@@ -749,7 +758,7 @@
             soundEnabled = false;
             if (motionEnabled) window.removeEventListener("devicemotion", onDeviceMotion);
             motionEnabled = false;
-            lastMotion = null;
+            lastGravityMotion = null;
             soundToggle.setAttribute("aria-pressed", "false");
             soundLabel.textContent = "Enable sound";
             soundsIcon.style.opacity = ".72";
