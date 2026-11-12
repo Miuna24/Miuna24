@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090a13">
+  <title>Common Ground — a living sound artwork</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #090a13;
+      color: #f4f2ff;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 46%, rgba(35, 29, 68, .28), transparent 58%),
+        #090a13;
+    }
+
+    #artwork {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .14;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    header {
+      position: fixed;
+      z-index: 2;
+      inset: 0 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 32px 4.2vw;
+      pointer-events: none;
+    }
+
+    .brand {
+      font-size: 11px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      color: rgba(245, 242, 255, .72);
+    }
+
+    .brand strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 15px;
+      letter-spacing: .14em;
+      color: #fbfaff;
+      font-weight: 500;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(245, 242, 255, .68);
+      font-size: 11px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #84f0c1;
+      box-shadow: 0 0 14px #84f0c1;
+      transition: background .3s ease, box-shadow .3s ease;
+    }
+
+    .live.offline .live-dot {
+      background: #ff8e9b;
+      box-shadow: 0 0 14px #ff8e9b;
+    }
+
+    main {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .invitation {
+      transform: translateY(-2px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+
+    .eyebrow {
+      color: rgba(206, 195, 255, .7);
+      font-size: 10px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 17px 0 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+      font-size: clamp(42px, 7.3vw, 88px);
+      letter-spacing: -.055em;
+      line-height: .96;
+      background: linear-gradient(110deg, #fff 20%, #d2c8ff 55%, #a9e8d8 90%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .invitation p {
+      margin: 0;
+      color: rgba(238, 234, 255, .58);
+      font-size: 13px;
+      letter-spacing: .025em;
+      line-height: 1.8;
+    }
+
+    footer {
+      position: fixed;
+      z-index: 2;
+      inset: auto 0 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 26px 4.2vw 30px;
+      pointer-events: none;
+    }
+
+    .people {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      color: rgba(245, 242, 255, .56);
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .people strong {
+      color: #fff;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 29px;
+      font-weight: 400;
+      letter-spacing: -.04em;
+    }
+
+    .sound-button {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid rgba(226, 218, 255, .22);
+      border-radius: 999px;
+      background: rgba(19, 17, 34, .64);
+      color: rgba(248, 246, 255, .84);
+      font: inherit;
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+
+    .sound-button:hover {
+      background: rgba(51, 42, 84, .72);
+      border-color: rgba(226, 218, 255, .48);
+      transform: translateY(-2px);
+    }
+
+    .sound-icon {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+
+    .hint {
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: 34px;
+      transform: translateX(-50%);
+      color: rgba(232, 226, 255, .38);
+      font-size: 9px;
+      letter-spacing: .19em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 23px 22px; }
+      footer { padding: 20px 22px 24px; }
+      .hint { bottom: 79px; }
+      .invitation { max-width: 84vw; }
+      .invitation p { font-size: 12px; }
+      .sound-button { min-height: 38px; padding: 0 12px; font-size: 9px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="artwork" aria-label="Interactive shared sound and light artwork"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <header>
+    <div class="brand">An experiment in togetherness<strong>COMMON GROUND</strong></div>
+    <div class="live" id="connection"><span class="live-dot"></span><span id="connection-label">connecting</span></div>
+  </header>
+  <main>
+    <section class="invitation" id="invitation">
+      <div class="eyebrow">One space · many rhythms</div>
+      <h1>Make a little<br>something together.</h1>
+      <p>Tap, move, or drift across the canvas.<br>Move or gently shake your device to play, too.</p>
+    </section>
+  </main>
+  <div class="hint">Touch the space to begin</div>
+  <footer>
+    <div class="people"><strong id="people-count">0</strong><span>in the room</span></div>
+    <button class="sound-button" id="sound-toggle" type="button" aria-pressed="false">
+      <svg class="sound-icon" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M3 7v4h3l4 3V4L6 7H3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+        <path d="M12.5 6.2a4 4 0 0 1 0 5.6M14.4 4.3a6.7 6.7 0 0 1 0 9.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      <span id="sound-label">Enable sound</span>
+    </button>
+  </footer>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("artwork");
+      const context = canvas.getContext("2d");
+      const connection = document.getElementById("connection");
+      const connectionLabel = document.getElementById("connection-label");
+      const peopleCount = document.getElementById("people-count");
+      const invitation = document.getElementById("invitation");
+      const soundToggle = document.getElementById("sound-toggle");
+      const soundLabel = document.getElementById("sound-label");
+      const soundsIcon = soundToggle.querySelector("svg");
+      const pulses = [];
+      const trails = [];
+      const colors = [184, 205, 228, 253, 278, 302, 328];
+      const notes = [0, 2, 4, 7, 9];
+      const deviceNotes = Array.from({ length: 5 }, () => notes[Math.floor(Math.random() * notes.length)]);
+      const deviceRoot = 45 + Math.floor(Math.random() * 20);
+      const gravityLimit = 1.2;
+      const shakeLimit = 5.5;
+      let socket;
+      let audioContext;
+      let soundEnabled = false;
+      let motionEnabled = false;
+      let lastSentAt = 0;
+      let lastMoveAt = 0;
+      let lastMotionPulseAt = 0;
+      let lastMotion = null;
+      let lastPoint = null;
+      let localHue = colors[Math.floor(Math.random() * colors.length)];
+      let activePointers = 0;
+      let width = 0;
+      let height = 0;
+      let pixelRatio = 1;
+
+      function resize() {
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      function websocketUrl() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        return protocol + "//" + window.location.host + "/ws";
+      }
+
+      function connect() {
+        socket = new WebSocket(websocketUrl());
+        socket.addEventListener("open", () => {
+          connection.classList.remove("offline");
+          connectionLabel.textContent = "live";
+        });
+        socket.addEventListener("message", (message) => {
+          let data;
+          try {
+            data = JSON.parse(message.data);
+          } catch (error) {
+            console.error("Could not read a live artwork message.", error);
+            return;
+          }
+          if (data.type === "welcome") {
+            setClientId(data.clientId);
+          } else if (data.type === "state") {
+            peopleCount.textContent = String(data.count);
+          } else if (data.type === "pulse") {
+            const x = data.x * width;
+            const y = data.y * height;
+            pulses.push({ x, y, hue: data.hue, strength: data.strength, age: 0, remote: true });
+            trails.push({ x, y, hue: data.hue, age: 0 });
+            if (data.clientId !== clientId) playNote(data.gesture, data.strength, data.hue);
+          }
+        });
+        socket.addEventListener("close", () => {
+          connection.classList.add("offline");
+          connectionLabel.textContent = "reconnecting";
+          window.setTimeout(connect, 1600);
+        });
+        socket.addEventListener("error", (error) => {
+          console.error("Live connection encountered an error.", error);
+          socket.close();
+        });
+      }
+
+      let clientId = "";
+      function setClientId(id) {
+        clientId = id;
+      }
+
+      function sendPulse(point, gesture, strength) {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        const now = performance.now();
+        if (now - lastSentAt < 46) return;
+        lastSentAt = now;
+        socket.send(JSON.stringify({
+          type: "pulse",
+          x: Math.max(0, Math.min(1, point.x / width)),
+          y: Math.max(0, Math.min(1, point.y / height)),
+          gesture,
+          strength: Math.max(0.18, Math.min(1, strength)),
+          hue: localHue
+        }));
+      }
+
+      function addLocalPulse(point, gesture, strength) {
+        localHue = (localHue + 23 + Math.random() * 12) % 360;
+        pulses.push({ x: point.x, y: point.y, hue: localHue, strength, age: 0, remote: false });
+        trails.push({ x: point.x, y: point.y, hue: localHue, age: 0 });
+        playNote(gesture, strength, localHue);
+        sendPulse(point, gesture, strength);
+        invitation.style.opacity = "0";
+        invitation.style.transform = "translateY(-9px)";
+      }
+
+      function gestureFromMovement(distance, elapsed) {
+        if (distance > 42) return "swipe";
+        if (elapsed > 110) return "drift";
+        return "tap";
+      }
+
+      function onPointerDown(event) {
+        canvas.setPointerCapture(event.pointerId);
+        activePointers++;
+        const point = { x: event.clientX, y: event.clientY };
+        lastPoint = { ...point, time: performance.now() };
+        addLocalPulse(point, "tap", 0.72 + Math.random() * 0.26);
+      }
+
+      function onPointerMove(event) {
+        if (!activePointers) return;
+        const now = performance.now();
+        if (now - lastMoveAt < 42) return;
+        lastMoveAt = now;
+        const point = { x: event.clientX, y: event.clientY };
+        const distance = lastPoint ? Math.hypot(point.x - lastPoint.x, point.y - lastPoint.y) : 0;
+        const elapsed = lastPoint ? now - lastPoint.time : 0;
+        const gesture = gestureFromMovement(distance, elapsed);
+        const strength = Math.min(1, 0.24 + distance / 95);
+        if (distance > 2) {
+          addLocalPulse(point, gesture, strength);
+          lastPoint = { ...point, time: now };
+        }
+      }
+
+      function onPointerUp() {
+        activePointers = Math.max(0, activePointers - 1);
+        if (!activePointers) lastPoint = null;
+      }
+
+      function onDeviceMotion(event) {
+        const acceleration = event.acceleration;
+        const measured = acceleration && (acceleration.x !== null || acceleration.y !== null || acceleration.z !== null)
+          ? acceleration
+          : event.accelerationIncludingGravity;
+        if (!measured) return;
+
+        const x = Number(measured.x) || 0;
+        const y = Number(measured.y) || 0;
+        const z = Number(measured.z) || 0;
+        const magnitude = Math.hypot(x, y, z);
+        const difference = lastMotion
+          ? Math.hypot(x - lastMotion.x, y - lastMotion.y, z - lastMotion.z)
+          : 0;
+        lastMotion = { x, y, z };
+
+        const hasLinearAcceleration = measured === acceleration;
+        const movement = hasLinearAcceleration ? magnitude : difference;
+        const threshold = hasLinearAcceleration ? gravityLimit : gravityLimit * 0.8;
+        if (movement < threshold) return;
+
+        const now = performance.now();
+        if (now - lastMotionPulseAt < 180) return;
+        lastMotionPulseAt = now;
+        const strength = Math.min(1, 0.3 + movement / 13);
+        const gesture = movement >= shakeLimit ? "shake" : "motion";
+        const point = {
+          x: width * (0.5 + Math.max(-0.4, Math.min(0.4, x / 25))),
+          y: height * (0.5 - Math.max(-0.4, Math.min(0.4, y / 25)))
+        };
+        addLocalPulse(point, gesture, strength);
+      }
+
+      async function enableMotion(permissionRequest, permissionRequestFailed) {
+        if (!window.isSecureContext) return "insecure";
+        const MotionEvent = window.DeviceMotionEvent;
+        if (!MotionEvent) return "unavailable";
+
+        try {
+          if (typeof MotionEvent.requestPermission === "function") {
+            if (permissionRequestFailed) return "denied";
+            const permission = await permissionRequest;
+            if (permission !== "granted") return "denied";
+          }
+          window.addEventListener("devicemotion", onDeviceMotion);
+          motionEnabled = true;
+          return "enabled";
+        } catch (error) {
+          console.warn("Motion sensing permission was not granted.", error);
+          return "denied";
+        }
+      }
+
+      function playNote(gesture, strength, hue) {
+        if (!soundEnabled || !audioContext) return;
+        if (audioContext.state === "suspended") {
+          audioContext.resume().catch((error) => console.error("Audio could not be resumed.", error));
+        }
+        const gestureIndex = gesture === "swipe" ? 1
+          : gesture === "drift" ? 2
+          : gesture === "shake" ? 3
+          : gesture === "motion" ? 4
+          : 0;
+        const semitone = deviceNotes[(gestureIndex + Math.floor(hue / 60)) % deviceNotes.length];
+        const frequency = 440 * Math.pow(2, (deviceRoot + semitone - 69) / 12);
+        const now = audioContext.currentTime;
+        const oscillator = audioContext.createOscillator();
+        const overtone = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const tone = gesture === "swipe" || gesture === "shake" ? "triangle" : "sine";
+        oscillator.type = tone;
+        overtone.type = "sine";
+        oscillator.frequency.setValueAtTime(frequency, now);
+        overtone.frequency.setValueAtTime(frequency * 2.01, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12 * strength, now + 0.018);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + (gesture === "drift" ? 0.8 : 0.48));
+        oscillator.connect(gain);
+        overtone.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(now);
+        overtone.start(now);
+        oscillator.stop(now + 0.85);
+        overtone.stop(now + 0.85);
+      }
+
+      async function toggleSound() {
+        try {
+          if (!audioContext) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) throw new Error("Web Audio is not supported by this browser.");
+            audioContext = new AudioContextClass();
+          }
+          if (soundEnabled) {
+            soundEnabled = false;
+            if (motionEnabled) window.removeEventListener("devicemotion", onDeviceMotion);
+            motionEnabled = false;
+            lastMotion = null;
+            soundToggle.setAttribute("aria-pressed", "false");
+            soundLabel.textContent = "Enable sound";
+            soundsIcon.style.opacity = ".72";
+            return;
+          }
+
+          const MotionEvent = window.DeviceMotionEvent;
+          let motionPermission;
+          let motionPermissionFailed = false;
+          if (MotionEvent && typeof MotionEvent.requestPermission === "function") {
+            try {
+              motionPermission = MotionEvent.requestPermission();
+            } catch (error) {
+              motionPermissionFailed = true;
+              console.warn("Motion sensing permission could not be requested.", error);
+            }
+          }
+          if (audioContext.state === "suspended") await audioContext.resume();
+          const motionStatus = await enableMotion(motionPermission, motionPermissionFailed);
+          soundEnabled = true;
+          soundToggle.setAttribute("aria-pressed", "true");
+          soundLabel.textContent = motionStatus === "enabled" ? "Sound + motion on"
+            : motionStatus === "denied" ? "Sound on · motion off"
+            : motionStatus === "insecure" ? "Sound on · motion needs HTTPS"
+            : "Sound on · motion unavailable";
+          soundToggle.title = motionStatus === "insecure"
+            ? "Motion sensing requires a secure connection (HTTPS), except on localhost."
+            : motionStatus === "unavailable"
+            ? "Motion sensing is not supported on this device."
+            : motionStatus === "denied"
+              ? "Allow motion access in your browser settings to play sounds by moving or shaking."
+              : "Sound and motion sensing are enabled.";
+          soundsIcon.style.opacity = "1";
+          playNote("tap", 0.3, localHue);
+        } catch (error) {
+          console.error("Sound could not be enabled.", error);
+          soundLabel.textContent = "Sound unavailable";
+        }
+      }
+
+      function drawBackground(time) {
+        context.clearRect(0, 0, width, height);
+        const energy = Math.min(1, pulses.length / 28);
+        const glow = context.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.72);
+        glow.addColorStop(0, "rgba(54, 41, 91, " + (0.055 + energy * 0.045) + ")");
+        glow.addColorStop(1, "rgba(9, 10, 19, 0)");
+        context.fillStyle = glow;
+        context.fillRect(0, 0, width, height);
+
+        const baseRadius = Math.min(width, height) * 0.19;
+        for (let ring = 0; ring < 3; ring++) {
+          const radius = baseRadius + ring * 31 + Math.sin(time / 1800 + ring * 1.8) * (4 + energy * 7);
+          context.beginPath();
+          context.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
+          context.strokeStyle = "rgba(190, 174, 255, " + (0.026 + energy * 0.035) + ")";
+          context.lineWidth = 1;
+          context.stroke();
+        }
+      }
+
+      function animate(time) {
+        drawBackground(time);
+        for (let index = trails.length - 1; index >= 0; index--) {
+          const trail = trails[index];
+          trail.age += 1;
+          if (trail.age > 95) {
+            trails.splice(index, 1);
+            continue;
+          }
+          const alpha = (1 - trail.age / 95) * 0.21;
+          const radius = 1 + trail.age * 0.12;
+          context.beginPath();
+          context.arc(trail.x, trail.y, radius, 0, Math.PI * 2);
+          context.fillStyle = "hsla(" + trail.hue + ", 82%, 73%, " + alpha + ")";
+          context.fill();
+        }
+
+        for (let index = pulses.length - 1; index >= 0; index--) {
+          const pulse = pulses[index];
+          pulse.age += 1;
+          if (pulse.age > 82) {
+            pulses.splice(index, 1);
+            continue;
+          }
+          const progress = pulse.age / 82;
+          const radius = 9 + progress * (130 + pulse.strength * 120);
+          const alpha = (1 - progress) * (pulse.remote ? 0.55 : 0.77);
+          context.beginPath();
+          context.arc(pulse.x, pulse.y, radius, 0, Math.PI * 2);
+          context.strokeStyle = "hsla(" + pulse.hue + ", 91%, 75%, " + alpha + ")";
+          context.lineWidth = (1 - progress) * 2.3 + .35;
+          context.stroke();
+          if (progress < .23) {
+            const core = context.createRadialGradient(pulse.x, pulse.y, 0, pulse.x, pulse.y, 22 + progress * 60);
+            core.addColorStop(0, "hsla(" + pulse.hue + ", 100%, 83%, " + (alpha * .27) + ")");
+            core.addColorStop(1, "hsla(" + pulse.hue + ", 100%, 83%, 0)");
+            context.fillStyle = core;
+            context.beginPath();
+            context.arc(pulse.x, pulse.y, 22 + progress * 60, 0, Math.PI * 2);
+            context.fill();
+          }
+        }
+        requestAnimationFrame(animate);
+      }
+
+      resize();
+      window.addEventListener("resize", resize);
+      canvas.addEventListener("pointerdown", onPointerDown);
+      canvas.addEventListener("pointermove", onPointerMove);
+      canvas.addEventListener("pointerup", onPointerUp);
+      canvas.addEventListener("pointercancel", onPointerUp);
+      soundToggle.addEventListener("click", toggleSound);
+      connect();
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
+</html>
