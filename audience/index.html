@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090a13">
+  <title>Ensemble — Common Ground</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #090a13;
+      color: #f4f2ff;
+      font-synthesis: none;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 46%, rgba(35, 29, 68, .28), transparent 58%),
+        #090a13;
+    }
+
+    canvas { position: fixed; inset: 0; width: 100%; height: 100%; }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .14;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    header {
+      position: fixed;
+      z-index: 2;
+      inset: 0 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 32px 4.2vw;
+      pointer-events: none;
+    }
+
+    .brand {
+      color: rgba(245, 242, 255, .72);
+      font-size: 11px;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+    .brand strong {
+      display: block;
+      margin-top: 8px;
+      color: #fbfaff;
+      font-size: 15px;
+      letter-spacing: .14em;
+      font-weight: 500;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(245, 242, 255, .68);
+      font-size: 11px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      pointer-events: auto;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #84f0c1;
+      box-shadow: 0 0 14px #84f0c1;
+    }
+    .offline .live-dot { background: #ff8e9b; box-shadow: 0 0 14px #ff8e9b; }
+
+    main {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      text-align: center;
+    }
+
+    .invitation {
+      transform: translateY(-2px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    .invitation.hidden { opacity: 0; transform: translateY(-9px); }
+    .eyebrow {
+      color: rgba(206, 195, 255, .7);
+      font-size: 10px;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 17px 0 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(42px, 7.3vw, 88px);
+      font-weight: 400;
+      letter-spacing: -.055em;
+      line-height: .96;
+      background: linear-gradient(110deg, #fff 20%, #d2c8ff 55%, #a9e8d8 90%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+    .invitation p {
+      margin: 0;
+      color: rgba(238, 234, 255, .58);
+      font-size: 13px;
+      letter-spacing: .025em;
+      line-height: 1.8;
+    }
+
+    footer {
+      position: fixed;
+      z-index: 2;
+      inset: auto 0 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 26px 4.2vw 30px;
+      pointer-events: none;
+    }
+
+    .listen-button {
+      margin-top: 24px;
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid rgba(226, 218, 255, .22);
+      border-radius: 999px;
+      background: rgba(19, 17, 34, .64);
+      color: rgba(248, 246, 255, .84);
+      font: inherit;
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      pointer-events: auto;
+      backdrop-filter: blur(12px);
+      transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    .listen-button:hover {
+      background: rgba(51, 42, 84, .72);
+      border-color: rgba(226, 218, 255, .48);
+      transform: translateY(-2px);
+    }
+    .listen-button:focus-visible, .volume-control input:focus-visible {
+      outline: 2px solid #c9baff;
+      outline-offset: 3px;
+    }
+
+    .device-count {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      color: rgba(245, 242, 255, .56);
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      pointer-events: auto;
+    }
+    .device-count strong {
+      color: #fff;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 29px;
+      font-weight: 400;
+      letter-spacing: -.04em;
+    }
+    .controls { display: flex; align-items: center; gap: 16px; pointer-events: auto; }
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: rgba(245, 242, 255, .56);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .volume-control input { width: 86px; accent-color: #bca8ff; cursor: pointer; }
+    .hint {
+      position: fixed;
+      z-index: 1;
+      bottom: 34px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(232, 226, 255, .38);
+      font-size: 9px;
+      letter-spacing: .19em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 23px 22px; }
+      footer { padding: 20px 22px 24px; }
+      .brand { font-size: 9px; }
+      .brand strong { font-size: 13px; }
+      .live { font-size: 9px; gap: 6px; }
+      .hint { bottom: 79px; }
+      .invitation { max-width: 84vw; }
+      .invitation p { font-size: 12px; }
+      .listen-button { min-height: 38px; padding: 0 12px; font-size: 9px; }
+      .controls { gap: 9px; }
+      .volume-control { gap: 5px; font-size: 8px; }
+      .volume-control input { width: 60px; }
+      .device-count { gap: 7px; font-size: 9px; }
+      .device-count strong { font-size: 25px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="ensemble" aria-label="Ripples showing each connected music device"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+  <header>
+    <div class="brand">An experiment in togetherness<strong>COMMON GROUND</strong></div>
+    <div class="live" id="connection"><span class="live-dot"></span><span id="connection-label">connecting</span></div>
+  </header>
+  <main>
+    <section class="invitation" id="invitation">
+      <div class="eyebrow">One space · many rhythms</div>
+      <h1>Make a little<br>something together.</h1>
+      <p>Every ripple is a device, every pulse a note.<br>Listen as the room plays together.</p>
+      <button class="listen-button" id="listen-button" type="button">Enable listening</button>
+    </section>
+  </main>
+  <div class="hint" id="hint">Each ripple is a device · the room sounds as it moves</div>
+  <footer>
+    <div class="device-count"><strong id="device-count">0</strong><span>in the room</span></div>
+    <div class="controls">
+      <label class="volume-control" for="master-volume">Volume
+        <input id="master-volume" type="range" min="0" max="100" value="65">
+      </label>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("ensemble");
+      const context = canvas.getContext("2d");
+      const connection = document.getElementById("connection");
+      const connectionLabel = document.getElementById("connection-label");
+      const deviceCount = document.getElementById("device-count");
+      const invitation = document.getElementById("invitation");
+      const listenButton = document.getElementById("listen-button");
+      const volumeControl = document.getElementById("master-volume");
+      const roleColors = { bass: 190, rhythm: 276, melody: 220, atmosphere: 320 };
+      const synths = {
+        soft: { waveform: "sine", partials: [1, 0.12], attack: 0.025, release: 0.58 },
+        warm: { waveform: "triangle", partials: [1, 0.2, 0.06], attack: 0.04, release: 0.9 },
+        pluck: { waveform: "triangle", partials: [1, 0.28], attack: 0.004, release: 0.22 },
+        glass: { waveform: "sine", partials: [1, 0.48, 0.22, 0.09], attack: 0.008, release: 1.25 },
+        reed: { waveform: "sawtooth", partials: [1, 0.12], attack: 0.018, release: 0.46 },
+        piano: {
+          waveform: "sine",
+          partials: [1, 0.42, 0.2, 0.11, 0.06],
+          ratios: [1, 2.003, 3.009, 4.02, 5.035],
+          decay: [1, 0.55, 0.36, 0.24, 0.16],
+          attack: 0.004,
+          release: 0.95
+        }
+      };
+      const devices = new Map();
+      const activeRipples = [];
+      let width = 0;
+      let height = 0;
+      let pixelRatio = 1;
+      let socket;
+      let audioContext;
+      let masterGain;
+      let soundEnabled = false;
+      let reconnectTimer;
+
+      function resize() {
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * pixelRatio);
+        canvas.height = Math.round(height * pixelRatio);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      }
+
+      function connect() {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const address = new URL(protocol + "//" + window.location.host + "/ws?mode=audience");
+        if (window.location.port === "5500") address.port = "3000";
+        socket = new WebSocket(address.toString());
+        socket.addEventListener("open", () => {
+          connection.classList.remove("offline");
+          connectionLabel.textContent = "live";
+        });
+        socket.addEventListener("message", (event) => {
+          let data;
+          try {
+            data = JSON.parse(event.data);
+          } catch (error) {
+            console.error("Could not read an ensemble message.", error);
+            return;
+          }
+          if (data.type === "state") {
+            updateDevices(data.members);
+          } else if (data.type === "pulse") {
+            onPulse(data);
+          }
+        });
+        socket.addEventListener("close", () => {
+          connection.classList.add("offline");
+          connectionLabel.textContent = "server offline · run npm start";
+          window.clearTimeout(reconnectTimer);
+          reconnectTimer = window.setTimeout(connect, 1600);
+        });
+        socket.addEventListener("error", (error) => {
+          console.error("Ensemble connection encountered an error.", error);
+          socket.close();
+        });
+      }
+
+      function updateDevices(members) {
+        const currentMembers = Array.isArray(members) ? members : [];
+        const present = new Set(currentMembers.map((member) => member.clientId));
+        for (const id of devices.keys()) {
+          if (!present.has(id)) devices.delete(id);
+        }
+        for (const member of currentMembers) {
+          if (!member || typeof member.clientId !== "string") continue;
+          const device = devices.get(member.clientId) || {
+            id: member.clientId,
+            role: member.role,
+            hue: roleColors[member.role] || 240,
+            phase: Math.random() * Math.PI * 2,
+            energy: 0,
+            lastGesture: ""
+          };
+          device.role = member.role;
+          devices.set(member.clientId, device);
+        }
+        deviceCount.textContent = String(devices.size);
+      }
+
+      function onPulse(data) {
+        if (typeof data.clientId !== "string") return;
+        let device = devices.get(data.clientId);
+        if (!device) {
+          device = {
+            id: data.clientId,
+            role: data.role || "melody",
+            hue: roleColors[data.role] || data.hue || 240,
+            phase: Math.random() * Math.PI * 2,
+            energy: 0,
+            lastGesture: ""
+          };
+          devices.set(data.clientId, device);
+          deviceCount.textContent = String(devices.size);
+        }
+        device.role = data.role || device.role;
+        device.hue = roleColors[device.role] || data.hue || device.hue;
+        device.energy = 1;
+        device.lastGesture = data.gesture;
+        activeRipples.push({ clientId: data.clientId, age: 0, strength: data.strength });
+        playNote(data);
+      }
+
+      function createAudio() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) throw new Error("Web Audio is not supported by this browser.");
+        audioContext = new AudioContextClass();
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = Number(volumeControl.value) / 100;
+        masterGain.connect(audioContext.destination);
+      }
+
+      function playNote(event) {
+        if (!soundEnabled || !audioContext || !Number.isInteger(event.midiNote)) return;
+        if (audioContext.state === "suspended") {
+          audioContext.resume().catch((error) => console.error("Audio could not be resumed.", error));
+        }
+        const synth = synths[event.synth] || synths.soft;
+        const frequency = 440 * Math.pow(2, (event.midiNote - 69) / 12);
+        const now = audioContext.currentTime;
+        const strength = Math.max(0.18, Math.min(1, Number(event.strength) || 0.5));
+        const role = event.role;
+        const release = role === "rhythm" ? Math.min(synth.release, 0.16)
+          : role === "bass" ? Math.max(synth.release, 0.75)
+          : role === "atmosphere" ? Math.max(synth.release, 1.2)
+          : event.gesture === "drift" ? Math.max(synth.release, 0.8)
+          : synth.release;
+        const voiceGain = audioContext.createGain();
+        const oscillators = synth.partials.map((level, index) => {
+          const oscillator = audioContext.createOscillator();
+          const partialGain = audioContext.createGain();
+          oscillator.type = synth.waveform;
+          const ratio = synth.ratios ? synth.ratios[index] : index === 0 ? 1 : index + 1.01;
+          oscillator.frequency.setValueAtTime(frequency * ratio, now);
+          partialGain.gain.setValueAtTime(level, now);
+          if (synth.decay) {
+            partialGain.gain.exponentialRampToValueAtTime(level * synth.decay[index], now + synth.release);
+          }
+          oscillator.connect(partialGain);
+          partialGain.connect(voiceGain);
+          oscillator.start(now);
+          return oscillator;
+        });
+        voiceGain.gain.setValueAtTime(0.0001, now);
+        voiceGain.gain.exponentialRampToValueAtTime(0.1 * strength, now + synth.attack);
+        voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + release);
+        voiceGain.connect(masterGain);
+        for (const oscillator of oscillators) oscillator.stop(now + release + 0.05);
+      }
+
+      async function enableSound() {
+        try {
+          if (!audioContext) createAudio();
+          if (audioContext.state === "suspended") await audioContext.resume();
+          soundEnabled = true;
+          listenButton.textContent = "Listening";
+          listenButton.setAttribute("aria-pressed", "true");
+          invitation.classList.add("hidden");
+        } catch (error) {
+          console.error("Ensemble audio could not be enabled.", error);
+          listenButton.textContent = "Audio unavailable";
+        }
+      }
+
+      function layoutDevices() {
+        const devicesInRoom = Array.from(devices.values());
+        const columns = Math.max(1, Math.min(5, Math.floor(width / 190)));
+        const rows = Math.ceil(devicesInRoom.length / columns);
+        const top = Math.max(120, height * 0.26);
+        const bottom = Math.min(height - 120, height * 0.78);
+        const availableHeight = Math.max(1, bottom - top);
+        const rowHeight = rows > 1 ? Math.min(175, availableHeight / (rows - 1)) : 0;
+        return devicesInRoom.map((device, index) => {
+          const row = Math.floor(index / columns);
+          const rowStart = row * columns;
+          const rowCount = Math.min(columns, devicesInRoom.length - rowStart);
+          const column = index % columns;
+          const gap = width / (rowCount + 1);
+          return { device, x: gap * (column + 1), y: rows === 1 ? height * 0.52 : top + row * rowHeight };
+        });
+      }
+
+      function draw(time) {
+        context.clearRect(0, 0, width, height);
+        const ambient = context.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.68);
+        ambient.addColorStop(0, "rgba(54, 41, 91, 0.12)");
+        ambient.addColorStop(1, "rgba(9, 10, 19, 0)");
+        context.fillStyle = ambient;
+        context.fillRect(0, 0, width, height);
+
+        const positions = new Map(layoutDevices().map((entry) => [entry.device.id, entry]));
+        for (const { device, x, y } of positions.values()) {
+          device.energy *= 0.96;
+          const breathe = Math.sin(time / 900 + device.phase) * 3;
+          const radius = 4 + device.energy * 4 + breathe * 0.18;
+          context.beginPath();
+          context.arc(x, y, radius + 12, 0, Math.PI * 2);
+          context.fillStyle = "hsla(" + device.hue + ", 82%, 73%, " + (0.035 + device.energy * 0.1) + ")";
+          context.fill();
+          context.beginPath();
+          context.arc(x, y, radius, 0, Math.PI * 2);
+          context.fillStyle = "hsla(" + device.hue + ", 90%, 82%, " + (0.42 + device.energy * 0.55) + ")";
+          context.fill();
+        }
+
+        for (let index = activeRipples.length - 1; index >= 0; index--) {
+          const ripple = activeRipples[index];
+          ripple.age++;
+          const position = positions.get(ripple.clientId);
+          if (ripple.age > 100 || !position) {
+            activeRipples.splice(index, 1);
+            continue;
+          }
+          const progress = ripple.age / 100;
+          context.beginPath();
+          context.arc(position.x, position.y, 8 + progress * (45 + ripple.strength * 65), 0, Math.PI * 2);
+          context.strokeStyle = "hsla(" + position.device.hue + ", 92%, 76%, " + ((1 - progress) * 0.72) + ")";
+          context.lineWidth = 1.8 * (1 - progress) + 0.3;
+          context.stroke();
+        }
+        requestAnimationFrame(draw);
+      }
+
+      volumeControl.addEventListener("input", () => {
+        if (masterGain && audioContext) {
+          masterGain.gain.setTargetAtTime(Number(volumeControl.value) / 100, audioContext.currentTime, 0.04);
+        }
+      });
+      listenButton.addEventListener("click", enableSound);
+      window.addEventListener("resize", resize);
+      resize();
+      connect();
+      requestAnimationFrame(draw);
+    })();
+  </script>
+</body>
+</html>

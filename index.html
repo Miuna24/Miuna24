@@ -70,6 +70,19 @@
       font-weight: 500;
     }
 
+    .ensemble-link {
+      display: inline-block;
+      margin-top: 9px;
+      color: rgba(206, 195, 255, .66);
+      font-size: 9px;
+      letter-spacing: .1em;
+      pointer-events: auto;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+
+    .ensemble-link:hover { color: #fff; }
+
     .live {
       display: flex;
       align-items: center;
@@ -357,7 +370,7 @@
   <canvas id="artwork" aria-label="Interactive shared sound and light artwork"></canvas>
   <div class="grain" aria-hidden="true"></div>
   <header>
-    <div class="brand">An experiment in togetherness<strong>COMMON GROUND</strong></div>
+    <div class="brand">An experiment in togetherness<strong>COMMON GROUND</strong><a class="ensemble-link" href="/audience">Listen to the whole ensemble ↗</a></div>
     <div class="identity">
       <div class="role-label">Your part<strong id="role-name">Joining...</strong></div>
       <div class="live" id="connection"><span class="live-dot"></span><span id="connection-label">connecting</span></div>
@@ -493,7 +506,9 @@
 
       function websocketUrl() {
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        return protocol + "//" + window.location.host + "/ws";
+        const address = new URL(protocol + "//" + window.location.host + "/ws");
+        if (window.location.port === "5500") address.port = "3000";
+        return address.toString();
       }
 
       function connect() {
@@ -526,7 +541,7 @@
         });
         socket.addEventListener("close", () => {
           connection.classList.add("offline");
-          connectionLabel.textContent = "reconnecting";
+          connectionLabel.textContent = "server offline · run npm start";
           window.setTimeout(connect, 1600);
         });
         socket.addEventListener("error", (error) => {

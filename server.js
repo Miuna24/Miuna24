@@ -6,17 +6,26 @@ const { WebSocketServer, WebSocket } = require("ws");
 
 const port = Number(process.env.PORT) || 3000;
 const publicDirectory = __dirname;
+const pages = new Map([
+  ["/", "index.html"],
+  ["/index.html", "index.html"],
+  ["/audience", "audience/index.html"],
+  ["/audience/", "audience/index.html"],
+  ["/audience/index.html", "audience/index.html"],
+  ["/audience.html", "audience/index.html"]
+]);
 const server = http.createServer((request, response) => {
   const pathname = new URL(request.url, `http://${request.headers.host || "localhost"}`).pathname;
-  if (request.method !== "GET" || (pathname !== "/" && pathname !== "/index.html")) {
+  const page = pages.get(pathname);
+  if (request.method !== "GET" || !page) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Not found");
     return;
   }
 
-  fs.readFile(path.join(publicDirectory, "index.html"), (error, content) => {
+  fs.readFile(path.join(publicDirectory, page), (error, content) => {
     if (error) {
-      console.error("Could not read index.html:", error);
+      console.error(`Could not read ${page}:`, error);
       response.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
       response.end("Unable to load the artwork.");
       return;
@@ -50,13 +59,16 @@ function broadcast(payload) {
 }
 
 function broadcastCount() {
-  broadcast({ type: "state", count: websocketServer.clients.size });
+  const members = Array.from(clients.values())
+    .filter((client) => !client.listenerOnly)
+    .map(({ clientId, role }) => ({ clientId, role }));
+  broadcast({ type: "state", count: members.length, members });
 }
 
 function assignRole() {
   const counts = new Map(roles.map((role) => [role, 0]));
   for (const client of clients.values()) {
-    counts.set(client.role, counts.get(client.role) + 1);
+    if (!client.listenerOnly) counts.set(client.role, counts.get(client.role) + 1);
   }
   return roles.reduce((leastUsed, role) =>
     counts.get(role) < counts.get(leastUsed) ? role : leastUsed
@@ -75,16 +87,17 @@ server.on("upgrade", (request, socket, head) => {
   });
 });
 
-websocketServer.on("connection", (websocket) => {
+websocketServer.on("connection", (websocket, request) => {
   const clientId = crypto.randomUUID();
-  const role = assignRole();
-  clients.set(websocket, { clientId, role, pulseCount: 0, windowStartedAt: Date.now(), messagesInWindow: 0 });
-  websocket.send(JSON.stringify({ type: "welcome", clientId, role }));
+  const listenerOnly = new URL(request.url, `http://${request.headers.host || "localhost"}`).searchParams.get("mode") === "audience";
+  const role = listenerOnly ? null : assignRole();
+  clients.set(websocket, { clientId, role, listenerOnly, pulseCount: 0, windowStartedAt: Date.now(), messagesInWindow: 0 });
+  websocket.send(JSON.stringify({ type: "welcome", clientId, role, listenerOnly }));
   broadcastCount();
 
   websocket.on("message", (rawMessage) => {
     const client = clients.get(websocket);
-    if (!client) return;
+    if (!client || client.listenerOnly) return;
     const now = Date.now();
     if (now - client.windowStartedAt >= 1000) {
       client.windowStartedAt = now;
