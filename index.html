@@ -449,6 +449,12 @@
       const notes = [0, 2, 4, 7, 9];
       const deviceNotes = Array.from({ length: 5 }, () => notes[Math.floor(Math.random() * notes.length)]);
       const deviceRoot = 45 + Math.floor(Math.random() * 20);
+      const roleNotes = {
+        bass: [36, 40, 43, 45, 48],
+        rhythm: [48, 50, 52, 55, 57],
+        melody: [60, 62, 64, 67, 69],
+        atmosphere: [72, 74, 76, 79, 81]
+      };
       const roleNames = {
         bass: "Bass",
         rhythm: "Rhythm",
@@ -474,6 +480,7 @@
       const shakeLimit = 3;
       let socket;
       let deviceRole = "";
+      let localPulseCount = 0;
       let audioContext;
       let masterGain;
       let toneFilter;
@@ -536,7 +543,6 @@
               pulses.push({ x, y, hue: data.hue, strength: data.strength, age: 0, remote: true });
               trails.push({ x, y, hue: data.hue, age: 0 });
             }
-            playNote(data.gesture, data.strength, data.hue, data.synth, data.midiNote, data.role);
           }
         });
         socket.addEventListener("close", () => {
@@ -554,7 +560,17 @@
       function setClientId(id, role) {
         clientId = id;
         deviceRole = roleNames[role] ? role : "";
+        localPulseCount = 0;
         document.getElementById("role-name").textContent = roleNames[deviceRole] || "Unassigned";
+      }
+
+      function nextLocalMidiNote(gesture) {
+        const scale = roleNotes[deviceRole];
+        if (!scale) return undefined;
+        const gestureOffset = gesture === "swipe" ? 2 : gesture === "drift" ? 4 : 0;
+        const midiNote = scale[(localPulseCount * 2 + gestureOffset) % scale.length];
+        localPulseCount++;
+        return midiNote;
       }
 
       function sendPulse(point, gesture, strength) {
@@ -578,7 +594,9 @@
         localHue = (localHue + 23 + Math.random() * 12) % 360;
         pulses.push({ x: point.x, y: point.y, hue: localHue, strength, age: 0, remote: false });
         trails.push({ x: point.x, y: point.y, hue: localHue, age: 0 });
-        if (!sendPulse(point, gesture, strength)) playNote(gesture, strength, localHue);
+        const sent = sendPulse(point, gesture, strength);
+        const midiNote = sent ? nextLocalMidiNote(gesture) : undefined;
+        playNote(gesture, strength, localHue, synthSelect.value, midiNote, deviceRole);
         invitation.style.opacity = "0";
         invitation.style.transform = "translateY(-9px)";
       }
