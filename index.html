@@ -483,7 +483,7 @@
             const y = data.y * height;
             pulses.push({ x, y, hue: data.hue, strength: data.strength, age: 0, remote: true });
             trails.push({ x, y, hue: data.hue, age: 0 });
-            if (data.clientId !== clientId) playNote(data.gesture, data.strength, data.hue);
+            if (data.clientId !== clientId) playNote(data.gesture, data.strength, data.hue, data.synth);
           }
         });
         socket.addEventListener("close", () => {
@@ -513,7 +513,8 @@
           y: Math.max(0, Math.min(1, point.y / height)),
           gesture,
           strength: Math.max(0.18, Math.min(1, strength)),
-          hue: localHue
+          hue: localHue,
+          synth: synthSelect.value
         }));
       }
 
@@ -651,7 +652,7 @@
         }
       }
 
-      function playNote(gesture, strength, hue) {
+      function playNote(gesture, strength, hue, synthName = synthSelect.value) {
         if (!soundEnabled || !audioContext) return;
         if (audioContext.state === "suspended") {
           audioContext.resume().catch((error) => console.error("Audio could not be resumed.", error));
@@ -665,7 +666,7 @@
         const frequency = 440 * Math.pow(2, (deviceRoot + semitone - 69) / 12);
         const shiftedFrequency = frequency * Math.pow(2, Number(pitchControl.value) / 12);
         const now = audioContext.currentTime;
-        const synth = synths[synthSelect.value] || synths.soft;
+        const synth = synths[synthName] || synths.soft;
         const gain = audioContext.createGain();
         const oscillators = synth.partials.map((level, index) => {
           const oscillator = audioContext.createOscillator();

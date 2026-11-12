@@ -33,6 +33,7 @@ const server = http.createServer((request, response) => {
 const websocketServer = new WebSocketServer({ noServer: true, maxPayload: 512 });
 const clients = new Map();
 const validGestures = new Set(["tap", "swipe", "drift", "motion", "shake"]);
+const validSynths = new Set(["soft", "warm", "pluck", "glass", "reed", "piano"]);
 
 function broadcast(payload) {
   const message = JSON.stringify(payload);
@@ -88,7 +89,8 @@ websocketServer.on("connection", (websocket) => {
       !Number.isFinite(data.y) ||
       !Number.isFinite(data.strength) ||
       !Number.isFinite(data.hue) ||
-      !validGestures.has(data.gesture)
+      !validGestures.has(data.gesture) ||
+      (data.synth !== undefined && !validSynths.has(data.synth))
     ) return;
 
     broadcast({
@@ -98,7 +100,8 @@ websocketServer.on("connection", (websocket) => {
       y: Math.max(0, Math.min(1, data.y)),
       strength: Math.max(0.18, Math.min(1, data.strength)),
       hue: ((data.hue % 360) + 360) % 360,
-      gesture: data.gesture
+      gesture: data.gesture,
+      synth: validSynths.has(data.synth) ? data.synth : "soft"
     });
   });
 
