@@ -191,6 +191,104 @@
       transform: translateY(-2px);
     }
 
+    .sound-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .audio-settings {
+      position: relative;
+    }
+
+    .audio-settings summary {
+      display: flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid rgba(226, 218, 255, .22);
+      border-radius: 999px;
+      background: rgba(19, 17, 34, .78);
+      color: rgba(248, 246, 255, .84);
+      font-size: 10px;
+      letter-spacing: .1em;
+      cursor: pointer;
+      list-style: none;
+      backdrop-filter: blur(12px);
+    }
+
+    .audio-settings summary::-webkit-details-marker { display: none; }
+    .audio-settings summary::after { content: "+"; margin-left: 9px; color: #c9baff; }
+    .audio-settings[open] summary::after { content: "−"; }
+
+    .settings-panel {
+      position: absolute;
+      right: 0;
+      bottom: calc(100% + 12px);
+      width: min(290px, calc(100vw - 32px));
+      padding: 17px 18px 15px;
+      border: 1px solid rgba(226, 218, 255, .2);
+      border-radius: 16px;
+      background: rgba(17, 15, 30, .94);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, .35);
+      backdrop-filter: blur(18px);
+    }
+
+    .setting {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 5px 12px;
+      align-items: center;
+      margin-bottom: 15px;
+      color: rgba(245, 242, 255, .78);
+      font-size: 11px;
+      letter-spacing: .04em;
+    }
+
+    .setting:last-child { margin-bottom: 0; }
+    .setting output { color: rgba(206, 195, 255, .78); font-variant-numeric: tabular-nums; }
+    .setting input { grid-column: 1 / -1; width: 100%; margin: 3px 0 0; accent-color: #bca8ff; cursor: pointer; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .synth-select {
+      min-height: 42px;
+      max-width: 180px;
+      padding: 0 34px 0 14px;
+      border: 1px solid rgba(226, 218, 255, .22);
+      border-radius: 999px;
+      background: rgba(19, 17, 34, .78);
+      color: rgba(248, 246, 255, .84);
+      font: inherit;
+      font-size: 10px;
+      letter-spacing: .1em;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+    }
+
+    .synth-select:focus-visible,
+    .sound-button:focus-visible,
+    .audio-settings summary:focus-visible {
+      outline: 2px solid #c9baff;
+      outline-offset: 3px;
+    }
+
+    .synth-select option {
+      color: #f4f2ff;
+      background: #171425;
+    }
+
     .sound-icon {
       width: 14px;
       height: 14px;
@@ -218,6 +316,10 @@
       .invitation { max-width: 84vw; }
       .invitation p { font-size: 12px; }
       .sound-button { min-height: 38px; padding: 0 12px; font-size: 9px; }
+      .sound-controls { gap: 6px; }
+      .synth-select { min-height: 38px; max-width: 112px; padding-left: 9px; font-size: 9px; }
+      .sound-button { gap: 6px; padding: 0 9px; letter-spacing: .08em; }
+      .audio-settings summary { min-height: 38px; padding: 0 9px; font-size: 9px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -242,13 +344,45 @@
   <div class="hint">Touch the space to begin</div>
   <footer>
     <div class="people"><strong id="people-count">0</strong><span>in the room</span></div>
-    <button class="sound-button" id="sound-toggle" type="button" aria-pressed="false">
-      <svg class="sound-icon" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <path d="M3 7v4h3l4 3V4L6 7H3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
-        <path d="M12.5 6.2a4 4 0 0 1 0 5.6M14.4 4.3a6.7 6.7 0 0 1 0 9.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-      </svg>
-      <span id="sound-label">Enable sound</span>
-    </button>
+    <div class="sound-controls">
+      <details class="audio-settings">
+        <summary>Adjust sound</summary>
+        <div class="settings-panel">
+          <label class="setting" for="volume-control">
+            <span>Volume</span><output id="volume-value" for="volume-control">65%</output>
+            <input id="volume-control" type="range" min="0" max="100" value="65">
+          </label>
+          <label class="setting" for="pitch-control">
+            <span>Pitch shift</span><output id="pitch-value" for="pitch-control">0 st</output>
+            <input id="pitch-control" type="range" min="-12" max="12" value="0">
+          </label>
+          <label class="setting" for="reverb-control">
+            <span>Reverb</span><output id="reverb-value" for="reverb-control">20%</output>
+            <input id="reverb-control" type="range" min="0" max="100" value="20">
+          </label>
+          <label class="setting" for="brightness-control">
+            <span>Tone</span><output id="brightness-value" for="brightness-control">65%</output>
+            <input id="brightness-control" type="range" min="0" max="100" value="65">
+          </label>
+        </div>
+      </details>
+      <label class="sr-only" for="synth-select">Choose your instrument sound</label>
+      <select class="synth-select" id="synth-select" aria-label="Choose your instrument sound">
+        <option value="soft">Soft sine</option>
+        <option value="warm">Warm triangle</option>
+        <option value="pluck">Plucked string</option>
+        <option value="glass">Glass bells</option>
+        <option value="reed">Bright reed</option>
+        <option value="piano">Piano</option>
+      </select>
+      <button class="sound-button" id="sound-toggle" type="button" aria-pressed="false">
+        <svg class="sound-icon" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M3 7v4h3l4 3V4L6 7H3Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M12.5 6.2a4 4 0 0 1 0 5.6M14.4 4.3a6.7 6.7 0 0 1 0 9.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <span id="sound-label">Enable sound</span>
+      </button>
+    </div>
   </footer>
 
   <script>
@@ -261,6 +395,11 @@
       const invitation = document.getElementById("invitation");
       const soundToggle = document.getElementById("sound-toggle");
       const soundLabel = document.getElementById("sound-label");
+      const synthSelect = document.getElementById("synth-select");
+      const volumeControl = document.getElementById("volume-control");
+      const pitchControl = document.getElementById("pitch-control");
+      const reverbControl = document.getElementById("reverb-control");
+      const brightnessControl = document.getElementById("brightness-control");
       const soundsIcon = soundToggle.querySelector("svg");
       const pulses = [];
       const trails = [];
@@ -268,10 +407,30 @@
       const notes = [0, 2, 4, 7, 9];
       const deviceNotes = Array.from({ length: 5 }, () => notes[Math.floor(Math.random() * notes.length)]);
       const deviceRoot = 45 + Math.floor(Math.random() * 20);
+      const synths = {
+        soft: { waveform: "sine", partials: [1, 0.12], attack: 0.025, release: 0.58 },
+        warm: { waveform: "triangle", partials: [1, 0.2, 0.06], attack: 0.04, release: 0.9 },
+        pluck: { waveform: "triangle", partials: [1, 0.28], attack: 0.004, release: 0.22 },
+        glass: { waveform: "sine", partials: [1, 0.48, 0.22, 0.09], attack: 0.008, release: 1.25 },
+        reed: { waveform: "sawtooth", partials: [1, 0.12], attack: 0.018, release: 0.46 },
+        piano: {
+          waveform: "sine",
+          partials: [1, 0.42, 0.2, 0.11, 0.06],
+          ratios: [1, 2.003, 3.009, 4.02, 5.035],
+          decay: [1, 0.55, 0.36, 0.24, 0.16],
+          attack: 0.004,
+          release: 0.95
+        }
+      };
       const gravityLimit = 1.2;
       const shakeLimit = 5.5;
       let socket;
       let audioContext;
+      let masterGain;
+      let toneFilter;
+      let reverbDelay;
+      let reverbFeedback;
+      let reverbGain;
       let soundEnabled = false;
       let motionEnabled = false;
       let lastSentAt = 0;
@@ -436,6 +595,42 @@
         addLocalPulse(point, gesture, strength);
       }
 
+      function updateAudioControls() {
+        document.getElementById("volume-value").textContent = volumeControl.value + "%";
+        const pitch = Number(pitchControl.value);
+        document.getElementById("pitch-value").textContent = (pitch > 0 ? "+" : "") + pitch + " st";
+        document.getElementById("reverb-value").textContent = reverbControl.value + "%";
+        document.getElementById("brightness-value").textContent = brightnessControl.value + "%";
+
+        if (!audioContext) return;
+        const now = audioContext.currentTime;
+        masterGain.gain.setTargetAtTime(Number(volumeControl.value) / 100, now, 0.04);
+        reverbGain.gain.setTargetAtTime(Number(reverbControl.value) / 100 * 0.55, now, 0.05);
+        toneFilter.frequency.setTargetAtTime(500 + Number(brightnessControl.value) * 95, now, 0.04);
+      }
+
+      function createAudioGraph() {
+        masterGain = audioContext.createGain();
+        toneFilter = audioContext.createBiquadFilter();
+        toneFilter.type = "lowpass";
+        reverbDelay = audioContext.createDelay(1);
+        reverbFeedback = audioContext.createGain();
+        reverbGain = audioContext.createGain();
+        const dryGain = audioContext.createGain();
+        reverbDelay.delayTime.value = 0.24;
+        reverbFeedback.gain.value = 0.22;
+        dryGain.gain.value = 1;
+        toneFilter.connect(dryGain);
+        dryGain.connect(masterGain);
+        toneFilter.connect(reverbDelay);
+        reverbDelay.connect(reverbGain);
+        reverbDelay.connect(reverbFeedback);
+        reverbFeedback.connect(reverbDelay);
+        reverbGain.connect(masterGain);
+        masterGain.connect(audioContext.destination);
+        updateAudioControls();
+      }
+
       async function enableMotion(permissionRequest, permissionRequestFailed) {
         if (!window.isSecureContext) return "insecure";
         const MotionEvent = window.DeviceMotionEvent;
@@ -468,25 +663,31 @@
           : 0;
         const semitone = deviceNotes[(gestureIndex + Math.floor(hue / 60)) % deviceNotes.length];
         const frequency = 440 * Math.pow(2, (deviceRoot + semitone - 69) / 12);
+        const shiftedFrequency = frequency * Math.pow(2, Number(pitchControl.value) / 12);
         const now = audioContext.currentTime;
-        const oscillator = audioContext.createOscillator();
-        const overtone = audioContext.createOscillator();
+        const synth = synths[synthSelect.value] || synths.soft;
         const gain = audioContext.createGain();
-        const tone = gesture === "swipe" || gesture === "shake" ? "triangle" : "sine";
-        oscillator.type = tone;
-        overtone.type = "sine";
-        oscillator.frequency.setValueAtTime(frequency, now);
-        overtone.frequency.setValueAtTime(frequency * 2.01, now);
+        const oscillators = synth.partials.map((level, index) => {
+          const oscillator = audioContext.createOscillator();
+          const partialGain = audioContext.createGain();
+          oscillator.type = synth.waveform;
+          const ratio = synth.ratios ? synth.ratios[index] : index === 0 ? 1 : index + 1.01;
+          oscillator.frequency.setValueAtTime(shiftedFrequency * ratio, now);
+          partialGain.gain.setValueAtTime(level, now);
+          if (synth.decay) {
+            partialGain.gain.exponentialRampToValueAtTime(level * synth.decay[index], now + synth.release);
+          }
+          oscillator.connect(partialGain);
+          partialGain.connect(gain);
+          oscillator.start(now);
+          return oscillator;
+        });
+        const release = gesture === "drift" ? Math.max(synth.release, 0.8) : synth.release;
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.12 * strength, now + 0.018);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + (gesture === "drift" ? 0.8 : 0.48));
-        oscillator.connect(gain);
-        overtone.connect(gain);
-        gain.connect(audioContext.destination);
-        oscillator.start(now);
-        overtone.start(now);
-        oscillator.stop(now + 0.85);
-        overtone.stop(now + 0.85);
+        gain.gain.exponentialRampToValueAtTime(0.09 * strength, now + synth.attack);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + release);
+        gain.connect(toneFilter);
+        for (const oscillator of oscillators) oscillator.stop(now + release + 0.05);
       }
 
       async function toggleSound() {
@@ -495,6 +696,7 @@
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) throw new Error("Web Audio is not supported by this browser.");
             audioContext = new AudioContextClass();
+            createAudioGraph();
           }
           if (soundEnabled) {
             soundEnabled = false;
@@ -613,6 +815,13 @@
       canvas.addEventListener("pointerup", onPointerUp);
       canvas.addEventListener("pointercancel", onPointerUp);
       soundToggle.addEventListener("click", toggleSound);
+      for (const control of [volumeControl, pitchControl, reverbControl, brightnessControl]) {
+        control.addEventListener("input", updateAudioControls);
+      }
+      synthSelect.addEventListener("change", () => {
+        if (soundEnabled) playNote("tap", 0.5, localHue);
+      });
+      updateAudioControls();
       connect();
       requestAnimationFrame(animate);
     })();
