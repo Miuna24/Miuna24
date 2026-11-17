@@ -383,7 +383,7 @@
       <p>Tap, move, or drift across the canvas.<br>Move or gently shake your device to play, too.</p>
     </section>
   </main>
-  <div class="hint">Touch the space to begin</div>
+  <div class="hint" id="hint" aria-live="polite">Touch the space to begin</div>
   <footer>
     <div class="people"><strong id="people-count">0</strong><span>in the room</span></div>
     <div class="sound-controls">
@@ -437,6 +437,7 @@
       const invitation = document.getElementById("invitation");
       const soundToggle = document.getElementById("sound-toggle");
       const soundLabel = document.getElementById("sound-label");
+      const hint = document.getElementById("hint");
       const synthSelect = document.getElementById("synth-select");
       const volumeControl = document.getElementById("volume-control");
       const pitchControl = document.getElementById("pitch-control");
@@ -499,6 +500,13 @@
       let width = 0;
       let height = 0;
       let pixelRatio = 1;
+      let rhythmEnabled = false;
+      let rhythmHasPlayed = false;
+      let rhythmScore = 0;
+      let rhythmMisses = 0;
+      let rhythmTarget = null;
+      let rhythmSpawnTimer;
+      let rhythmExpiryTimer;
 
       function resize() {
         pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -534,8 +542,11 @@
           }
           if (data.type === "welcome") {
             setClientId(data.clientId, data.role);
+            setRhythmEnabled(data.rhythmEnabled === true);
           } else if (data.type === "state") {
             peopleCount.textContent = String(data.count);
+          } else if (data.type === "rhythm-state") {
+            setRhythmEnabled(data.enabled);
           } else if (data.type === "pulse") {
             if (data.clientId !== clientId) {
               const x = data.x * width;
@@ -601,6 +612,61 @@
         invitation.style.transform = "translateY(-9px)";
       }
 
+      function updateRhythmHint() {
+        hint.textContent = rhythmEnabled
+          ? "Rhythm game · score " + rhythmScore + " · tap the glowing circles"
+          : rhythmHasPlayed
+            ? "Rhythm round ended · " + rhythmScore + " hits · " + rhythmMisses + " missed"
+            : "Touch the space to begin";
+      }
+
+      function spawnRhythmTarget() {
+        if (!rhythmEnabled || rhythmTarget) return;
+        const margin = 44;
+        const top = Math.min(height - margin, Math.max(margin, height * 0.2));
+        const bottom = Math.max(top, height - margin - 72);
+        const now = performance.now();
+        rhythmTarget = {
+          x: margin + Math.random() * Math.max(0, width - margin * 2),
+          y: top + Math.random() * Math.max(0, bottom - top),
+          createdAt: now,
+          expiresAt: now + 900
+        };
+        rhythmExpiryTimer = window.setTimeout(() => {
+          if (!rhythmTarget) return;
+          rhythmTarget = null;
+          rhythmMisses++;
+          updateRhythmHint();
+        }, 900);
+      }
+
+      function setRhythmEnabled(enabled) {
+        const nextEnabled = enabled === true;
+        if (nextEnabled === rhythmEnabled) return;
+        rhythmEnabled = nextEnabled;
+        window.clearInterval(rhythmSpawnTimer);
+        window.clearTimeout(rhythmExpiryTimer);
+        rhythmTarget = null;
+        if (rhythmEnabled) {
+          rhythmHasPlayed = true;
+          rhythmScore = 0;
+          rhythmMisses = 0;
+          invitation.style.opacity = "0";
+          invitation.style.transform = "translateY(-9px)";
+          spawnRhythmTarget();
+          rhythmSpawnTimer = window.setInterval(spawnRhythmTarget, 650);
+        }
+        updateRhythmHint();
+      }
+
+      function hitRhythmTarget(point) {
+        if (!rhythmTarget || Math.hypot(point.x - rhythmTarget.x, point.y - rhythmTarget.y) > 38) return;
+        rhythmTarget = null;
+        window.clearTimeout(rhythmExpiryTimer);
+        rhythmScore++;
+        updateRhythmHint();
+      }
+
       function gestureFromMovement(distance, elapsed) {
         if (distance > 42) return "swipe";
         if (elapsed > 110) return "drift";
@@ -611,6 +677,7 @@
         canvas.setPointerCapture(event.pointerId);
         activePointers++;
         const point = { x: event.clientX, y: event.clientY };
+        hitRhythmTarget(point);
         lastPoint = { ...point, time: performance.now() };
         addLocalPulse(point, "tap", 0.72 + Math.random() * 0.26);
       }
@@ -852,6 +919,36 @@
         }
       }
 
+      function drawRhythmTarget(time) {
+        if (!rhythmTarget) return;
+        const progress = Math.max(0, Math.min(1, (rhythmTarget.expiresAt - time) / 900));
+        const pulse = 1 + Math.sin(time / 95) * 0.06;
+        const radius = 27 * pulse;
+        const glow = context.createRadialGradient(
+          rhythmTarget.x, rhythmTarget.y, 0,
+          rhythmTarget.x, rhythmTarget.y, radius * 1.8
+        );
+        glow.addColorStop(0, "rgba(248, 242, 255, 0.98)");
+        glow.addColorStop(0.18, "rgba(205, 185, 255, 0.9)");
+        glow.addColorStop(0.55, "rgba(169, 141, 255, 0.46)");
+        glow.addColorStop(1, "rgba(169, 141, 255, 0)");
+        context.beginPath();
+        context.arc(rhythmTarget.x, rhythmTarget.y, radius * 1.8, 0, Math.PI * 2);
+        context.fillStyle = glow;
+        context.fill();
+
+        context.beginPath();
+        context.arc(rhythmTarget.x, rhythmTarget.y, radius, 0, Math.PI * 2);
+        context.strokeStyle = "rgba(255, 255, 255, 0.9)";
+        context.lineWidth = 1.5;
+        context.stroke();
+        context.beginPath();
+        context.arc(rhythmTarget.x, rhythmTarget.y, radius + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progress);
+        context.strokeStyle = "rgba(220, 207, 255, 0.82)";
+        context.lineWidth = 2;
+        context.stroke();
+      }
+
       function animate(time) {
         drawBackground(time);
         for (let index = trails.length - 1; index >= 0; index--) {
@@ -894,6 +991,7 @@
             context.fill();
           }
         }
+        drawRhythmTarget(time);
         requestAnimationFrame(animate);
       }
 

@@ -161,6 +161,32 @@
       outline-offset: 3px;
     }
 
+    .rhythm-control {
+      min-height: 42px;
+      padding: 0 16px;
+      border: 1px solid rgba(226, 218, 255, .22);
+      border-radius: 999px;
+      background: rgba(19, 17, 34, .64);
+      color: rgba(248, 246, 255, .84);
+      font: inherit;
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      pointer-events: auto;
+      backdrop-filter: blur(12px);
+      transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    .rhythm-control:hover:not(:disabled) {
+      background: rgba(51, 42, 84, .72);
+      border-color: rgba(226, 218, 255, .48);
+      transform: translateY(-2px);
+    }
+    .rhythm-control:focus-visible {
+      outline: 2px solid #c9baff;
+      outline-offset: 3px;
+    }
+
     .device-count {
       display: flex;
       align-items: baseline;
@@ -214,6 +240,7 @@
       .invitation { max-width: 84vw; }
       .invitation p { font-size: 12px; }
       .listen-button { min-height: 38px; padding: 0 12px; font-size: 9px; }
+      .rhythm-control { min-height: 38px; padding: 0 8px; font-size: 8px; letter-spacing: .05em; }
       .controls { gap: 9px; }
       .volume-control { gap: 5px; font-size: 8px; }
       .volume-control input { width: 60px; }
@@ -245,6 +272,7 @@
   <footer>
     <div class="device-count"><strong id="device-count">0</strong><span>in the room</span></div>
     <div class="controls">
+      <button class="rhythm-control" id="rhythm-control" type="button" aria-label="Start rhythm game" aria-pressed="false" disabled>Start rhythm</button>
       <label class="volume-control" for="master-volume">Volume
         <input id="master-volume" type="range" min="0" max="100" value="65">
       </label>
@@ -261,6 +289,7 @@
       const invitation = document.getElementById("invitation");
       const listenButton = document.getElementById("listen-button");
       const volumeControl = document.getElementById("master-volume");
+      const rhythmControl = document.getElementById("rhythm-control");
       const roleColors = { bass: 190, rhythm: 276, melody: 220, atmosphere: 320 };
       const synths = {
         soft: { waveform: "sine", partials: [1, 0.12], attack: 0.025, release: 0.58 },
@@ -287,6 +316,7 @@
       let masterGain;
       let soundEnabled = false;
       let reconnectTimer;
+      let rhythmEnabled = false;
 
       function resize() {
         pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -307,6 +337,7 @@
         socket.addEventListener("open", () => {
           connection.classList.remove("offline");
           connectionLabel.textContent = "live";
+          rhythmControl.disabled = false;
         });
         socket.addEventListener("message", (event) => {
           let data;
@@ -316,7 +347,11 @@
             console.error("Could not read an ensemble message.", error);
             return;
           }
-          if (data.type === "state") {
+          if (data.type === "welcome") {
+            updateRhythmControl(data.rhythmEnabled === true);
+          } else if (data.type === "rhythm-state") {
+            updateRhythmControl(data.enabled);
+          } else if (data.type === "state") {
             updateDevices(data.members);
           } else if (data.type === "pulse") {
             onPulse(data);
@@ -325,6 +360,7 @@
         socket.addEventListener("close", () => {
           connection.classList.add("offline");
           connectionLabel.textContent = "server offline · run npm start";
+          rhythmControl.disabled = true;
           window.clearTimeout(reconnectTimer);
           reconnectTimer = window.setTimeout(connect, 1600);
         });
@@ -440,6 +476,18 @@
         }
       }
 
+      function updateRhythmControl(enabled) {
+        rhythmEnabled = enabled === true;
+        rhythmControl.textContent = rhythmEnabled ? "Stop rhythm" : "Start rhythm";
+        rhythmControl.setAttribute("aria-label", rhythmEnabled ? "Stop rhythm game" : "Start rhythm game");
+        rhythmControl.setAttribute("aria-pressed", String(rhythmEnabled));
+      }
+
+      function toggleRhythmGame() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify({ type: "rhythm-control", enabled: !rhythmEnabled }));
+      }
+
       function layoutDevices() {
         const devicesInRoom = Array.from(devices.values());
         const columns = Math.max(1, Math.min(5, Math.floor(width / 190)));
@@ -505,6 +553,7 @@
         }
       });
       listenButton.addEventListener("click", enableSound);
+      rhythmControl.addEventListener("click", toggleRhythmGame);
       window.addEventListener("resize", resize);
       resize();
       connect();

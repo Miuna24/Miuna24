@@ -50,6 +50,7 @@ const roleNotes = {
   atmosphere: [72, 74, 76, 79, 81]
 };
 const roles = Object.keys(roleNotes);
+let rhythmEnabled = false;
 
 function broadcast(payload) {
   const message = JSON.stringify(payload);
@@ -92,12 +93,12 @@ websocketServer.on("connection", (websocket, request) => {
   const listenerOnly = new URL(request.url, `http://${request.headers.host || "localhost"}`).searchParams.get("mode") === "audience";
   const role = listenerOnly ? null : assignRole();
   clients.set(websocket, { clientId, role, listenerOnly, pulseCount: 0, windowStartedAt: Date.now(), messagesInWindow: 0 });
-  websocket.send(JSON.stringify({ type: "welcome", clientId, role, listenerOnly }));
+  websocket.send(JSON.stringify({ type: "welcome", clientId, role, listenerOnly, rhythmEnabled }));
   broadcastCount();
 
   websocket.on("message", (rawMessage) => {
     const client = clients.get(websocket);
-    if (!client || client.listenerOnly) return;
+    if (!client) return;
     const now = Date.now();
     if (now - client.windowStartedAt >= 1000) {
       client.windowStartedAt = now;
@@ -111,6 +112,13 @@ websocketServer.on("connection", (websocket, request) => {
       data = JSON.parse(rawMessage.toString());
     } catch (error) {
       console.warn("Ignored malformed WebSocket message.");
+      return;
+    }
+    if (client.listenerOnly) {
+      if (data && data.type === "rhythm-control" && typeof data.enabled === "boolean") {
+        rhythmEnabled = data.enabled;
+        broadcast({ type: "rhythm-state", enabled: rhythmEnabled });
+      }
       return;
     }
     if (
