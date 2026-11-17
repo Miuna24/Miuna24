@@ -58,6 +58,7 @@ const rhythmDurationMs = 90_000;
 let rhythmEnabled = false;
 let rhythmEndsAt = 0;
 let rhythmTimer;
+let nextRoleIndex = Math.floor(Math.random() * roles.length);
 
 function broadcast(payload) {
   const message = JSON.stringify(payload);
@@ -96,9 +97,14 @@ function assignRole() {
   for (const client of clients.values()) {
     if (!client.listenerOnly) counts.set(client.role, counts.get(client.role) + 1);
   }
-  return roles.reduce((leastUsed, role) =>
-    counts.get(role) < counts.get(leastUsed) ? role : leastUsed
-  );
+  const fewestAssigned = Math.min(...counts.values());
+  for (let offset = 0; offset < roles.length; offset++) {
+    const index = (nextRoleIndex + offset) % roles.length;
+    if (counts.get(roles[index]) !== fewestAssigned) continue;
+    nextRoleIndex = (index + 1) % roles.length;
+    return roles[index];
+  }
+  throw new Error("No participant role is available.");
 }
 
 server.on("upgrade", (request, socket, head) => {
