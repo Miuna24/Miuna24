@@ -507,6 +507,9 @@
       let rhythmTarget = null;
       let rhythmSpawnTimer;
       let rhythmExpiryTimer;
+      let rhythmCountdownTimer;
+      let rhythmEndsAt = 0;
+      let lastDisplayedRhythmSecond = null;
 
       function resize() {
         pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
@@ -542,11 +545,11 @@
           }
           if (data.type === "welcome") {
             setClientId(data.clientId, data.role);
-            setRhythmEnabled(data.rhythmEnabled === true);
+            setRhythmEnabled(data.rhythmEnabled === true, data.rhythmEndsAt);
           } else if (data.type === "state") {
             peopleCount.textContent = String(data.count);
           } else if (data.type === "rhythm-state") {
-            setRhythmEnabled(data.enabled);
+            setRhythmEnabled(data.enabled, data.endsAt);
           } else if (data.type === "pulse") {
             if (data.clientId !== clientId) {
               const x = data.x * width;
@@ -614,10 +617,15 @@
 
       function updateRhythmHint() {
         hint.textContent = rhythmEnabled
-          ? "Rhythm game · score " + rhythmScore + " · tap the glowing circles"
+          ? "Rhythm · " + formatRhythmTime() + " · score " + rhythmScore + " · missed " + rhythmMisses
           : rhythmHasPlayed
-            ? "Rhythm round ended · " + rhythmScore + " hits · " + rhythmMisses + " missed"
+            ? "Rhythm round ended · final score " + rhythmScore + " · " + rhythmMisses + " missed"
             : "Touch the space to begin";
+      }
+
+      function formatRhythmTime() {
+        const remaining = Math.max(0, Math.ceil((rhythmEndsAt - Date.now()) / 1000));
+        return Math.floor(remaining / 60) + ":" + String(remaining % 60).padStart(2, "0");
       }
 
       function spawnRhythmTarget() {
@@ -629,7 +637,6 @@
         rhythmTarget = {
           x: margin + Math.random() * Math.max(0, width - margin * 2),
           y: top + Math.random() * Math.max(0, bottom - top),
-          createdAt: now,
           expiresAt: now + 900
         };
         rhythmExpiryTimer = window.setTimeout(() => {
@@ -640,11 +647,18 @@
         }, 900);
       }
 
-      function setRhythmEnabled(enabled) {
+      function setRhythmEnabled(enabled, endsAt) {
         const nextEnabled = enabled === true;
-        if (nextEnabled === rhythmEnabled) return;
+        if (nextEnabled && Number.isFinite(endsAt) && endsAt > Date.now()) {
+          rhythmEndsAt = endsAt;
+        }
+        if (nextEnabled === rhythmEnabled) {
+          updateRhythmHint();
+          return;
+        }
         rhythmEnabled = nextEnabled;
         window.clearInterval(rhythmSpawnTimer);
+        window.clearInterval(rhythmCountdownTimer);
         window.clearTimeout(rhythmExpiryTimer);
         rhythmTarget = null;
         if (rhythmEnabled) {
@@ -653,8 +667,19 @@
           rhythmMisses = 0;
           invitation.style.opacity = "0";
           invitation.style.transform = "translateY(-9px)";
+          lastDisplayedRhythmSecond = null;
           spawnRhythmTarget();
           rhythmSpawnTimer = window.setInterval(spawnRhythmTarget, 650);
+          rhythmCountdownTimer = window.setInterval(() => {
+            const remaining = Math.max(0, Math.ceil((rhythmEndsAt - Date.now()) / 1000));
+            if (remaining !== lastDisplayedRhythmSecond) {
+              lastDisplayedRhythmSecond = remaining;
+              updateRhythmHint();
+            }
+            if (remaining === 0) setRhythmEnabled(false);
+          }, 200);
+        } else {
+          rhythmEndsAt = 0;
         }
         updateRhythmHint();
       }

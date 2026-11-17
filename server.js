@@ -50,7 +50,10 @@ const roleNotes = {
   atmosphere: [72, 74, 76, 79, 81]
 };
 const roles = Object.keys(roleNotes);
+const rhythmDurationMs = 90_000;
 let rhythmEnabled = false;
+let rhythmEndsAt = 0;
+let rhythmTimer;
 
 function broadcast(payload) {
   const message = JSON.stringify(payload);
@@ -64,6 +67,24 @@ function broadcastCount() {
     .filter((client) => !client.listenerOnly)
     .map(({ clientId, role }) => ({ clientId, role }));
   broadcast({ type: "state", count: members.length, members });
+}
+
+function setRhythmEnabled(enabled) {
+  rhythmEnabled = enabled;
+  clearTimeout(rhythmTimer);
+  if (rhythmEnabled) {
+    rhythmEndsAt = Date.now() + rhythmDurationMs;
+    rhythmTimer = setTimeout(() => {
+      rhythmEnabled = false;
+      rhythmEndsAt = 0;
+      rhythmTimer = undefined;
+      broadcast({ type: "rhythm-state", enabled: false, endsAt: 0 });
+    }, rhythmDurationMs);
+  } else {
+    rhythmEndsAt = 0;
+    rhythmTimer = undefined;
+  }
+  broadcast({ type: "rhythm-state", enabled: rhythmEnabled, endsAt: rhythmEndsAt });
 }
 
 function assignRole() {
@@ -93,7 +114,7 @@ websocketServer.on("connection", (websocket, request) => {
   const listenerOnly = new URL(request.url, `http://${request.headers.host || "localhost"}`).searchParams.get("mode") === "audience";
   const role = listenerOnly ? null : assignRole();
   clients.set(websocket, { clientId, role, listenerOnly, pulseCount: 0, windowStartedAt: Date.now(), messagesInWindow: 0 });
-  websocket.send(JSON.stringify({ type: "welcome", clientId, role, listenerOnly, rhythmEnabled }));
+  websocket.send(JSON.stringify({ type: "welcome", clientId, role, listenerOnly, rhythmEnabled, rhythmEndsAt }));
   broadcastCount();
 
   websocket.on("message", (rawMessage) => {
@@ -116,8 +137,7 @@ websocketServer.on("connection", (websocket, request) => {
     }
     if (client.listenerOnly) {
       if (data && data.type === "rhythm-control" && typeof data.enabled === "boolean") {
-        rhythmEnabled = data.enabled;
-        broadcast({ type: "rhythm-state", enabled: rhythmEnabled });
+        setRhythmEnabled(data.enabled);
       }
       return;
     }
