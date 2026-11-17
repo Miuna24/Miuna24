@@ -44,10 +44,14 @@ const clients = new Map();
 const validGestures = new Set(["tap", "swipe", "drift", "motion", "shake"]);
 const validSynths = new Set(["soft", "warm", "pluck", "glass", "reed", "piano"]);
 const roleNotes = {
+  subbass: [28, 31, 33, 35, 36],
   bass: [36, 40, 43, 45, 48],
   rhythm: [48, 50, 52, 55, 57],
+  harmony: [53, 55, 59, 60, 62],
   melody: [60, 62, 64, 67, 69],
-  atmosphere: [72, 74, 76, 79, 81]
+  atmosphere: [72, 74, 76, 79, 81],
+  lead: [67, 69, 71, 74, 76],
+  sparkle: [84, 86, 88, 91, 93]
 };
 const roles = Object.keys(roleNotes);
 const rhythmDurationMs = 90_000;

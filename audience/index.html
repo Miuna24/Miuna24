@@ -290,7 +290,16 @@
       const listenButton = document.getElementById("listen-button");
       const volumeControl = document.getElementById("master-volume");
       const rhythmControl = document.getElementById("rhythm-control");
-      const roleColors = { bass: 190, rhythm: 276, melody: 220, atmosphere: 320 };
+      const roleColors = {
+        subbass: 168,
+        bass: 190,
+        rhythm: 276,
+        harmony: 142,
+        melody: 220,
+        atmosphere: 320,
+        lead: 42,
+        sparkle: 300
+      };
       const synths = {
         soft: { waveform: "sine", partials: [1, 0.12], attack: 0.025, release: 0.58 },
         warm: { waveform: "triangle", partials: [1, 0.2, 0.06], attack: 0.04, release: 0.9 },
@@ -435,7 +444,7 @@
         const strength = Math.max(0.18, Math.min(1, Number(event.strength) || 0.5));
         const role = event.role;
         const release = role === "rhythm" ? Math.min(synth.release, 0.16)
-          : role === "bass" ? Math.max(synth.release, 0.75)
+          : role === "bass" || role === "subbass" ? Math.max(synth.release, 0.75)
           : role === "atmosphere" ? Math.max(synth.release, 1.2)
           : event.gesture === "drift" ? Math.max(synth.release, 0.8)
           : synth.release;

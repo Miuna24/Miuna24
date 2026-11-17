@@ -350,15 +350,52 @@
       .identity { gap: 12px; }
       .role-label { font-size: 8px; }
       .role-label strong { font-size: 9px; }
-      footer { padding: 20px 22px 24px; }
-      .hint { bottom: 79px; }
+      footer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+      }
+      .people { justify-self: start; }
+      .sound-controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        gap: 7px;
+      }
+      .audio-settings { min-width: 0; }
+      .audio-settings summary {
+        justify-content: center;
+        min-height: 40px;
+      }
+      .settings-panel {
+        position: fixed;
+        right: 12px;
+        bottom: calc(164px + env(safe-area-inset-bottom));
+        left: 12px;
+        width: auto;
+        max-height: min(360px, calc(100dvh - 190px - env(safe-area-inset-bottom)));
+        overflow-y: auto;
+      }
+      .synth-select {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        padding: 0 26px 0 9px;
+      }
+      .sound-button {
+        grid-column: 1 / -1;
+        justify-content: center;
+        min-height: 40px;
+      }
+      .hint { bottom: 148px; }
       .invitation { max-width: 84vw; }
       .invitation p { font-size: 12px; }
       .sound-button { min-height: 38px; padding: 0 12px; font-size: 9px; }
-      .sound-controls { gap: 6px; }
-      .synth-select { min-height: 38px; max-width: 112px; padding-left: 9px; font-size: 9px; }
+      .sound-controls { gap: 7px; }
+      .synth-select { min-height: 40px; font-size: 9px; }
       .sound-button { gap: 6px; padding: 0 9px; letter-spacing: .08em; }
-      .audio-settings summary { min-height: 38px; padding: 0 9px; font-size: 9px; }
+      .audio-settings summary { min-height: 40px; padding: 0 9px; font-size: 9px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -451,16 +488,24 @@
       const deviceNotes = Array.from({ length: 5 }, () => notes[Math.floor(Math.random() * notes.length)]);
       const deviceRoot = 45 + Math.floor(Math.random() * 20);
       const roleNotes = {
+        subbass: [28, 31, 33, 35, 36],
         bass: [36, 40, 43, 45, 48],
         rhythm: [48, 50, 52, 55, 57],
+        harmony: [53, 55, 59, 60, 62],
         melody: [60, 62, 64, 67, 69],
-        atmosphere: [72, 74, 76, 79, 81]
+        atmosphere: [72, 74, 76, 79, 81],
+        lead: [67, 69, 71, 74, 76],
+        sparkle: [84, 86, 88, 91, 93]
       };
       const roleNames = {
+        subbass: "Sub-bass",
         bass: "Bass",
         rhythm: "Rhythm",
+        harmony: "Harmony",
         melody: "Melody",
-        atmosphere: "Atmosphere"
+        atmosphere: "Atmosphere",
+        lead: "Lead",
+        sparkle: "Sparkle"
       };
       const synths = {
         soft: { waveform: "sine", partials: [1, 0.12], attack: 0.025, release: 0.58 },
@@ -859,7 +904,7 @@
           return oscillator;
         });
         const release = role === "rhythm" ? Math.min(synth.release, 0.16)
-          : role === "bass" ? Math.max(synth.release, 0.75)
+          : role === "bass" || role === "subbass" ? Math.max(synth.release, 0.75)
           : role === "atmosphere" ? Math.max(synth.release, 1.2)
           : gesture === "drift" ? Math.max(synth.release, 0.8)
           : synth.release;
